@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 # -*- coding: utf-8 -*-
 
 """This program is a five in row game, which is used for the coding
@@ -86,10 +87,8 @@ class Game(list,object):
 #        #   "CMD Parameters": "15x15"
 #        #},
 
-
         self.clientId = "-1"
         while self.clientId == "-1":
-            print ('#')
             ev = event.wait()
             print ('## ev.data %s' % str(ev))
             if ev.type == USEREVENT+1:
