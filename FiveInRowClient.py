@@ -43,7 +43,7 @@ class Game(list,object):
     black = image.load('Images/Black.png')
     white = image.load('Images/White.png')
     # load background image
-    board = image.load('Images/Board2.png')
+    board = image.load('Images/Board.png')
     
     def __init__(self):
 
