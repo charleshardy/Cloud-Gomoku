@@ -1,38 +1,28 @@
 #!/usr/bin/env python
 
-# -*- coding: utf-8 -*-
-
 """This program is a five in row game, which is used for the coding
 camp 2015 in WindRiver.com"""
 
+# -*- coding: utf-8 -*-
 from pygame import *
 import socket
 import threading
 import json
     
-#            R    G    B
-GRAY     = (100, 100, 100)
-NAVYBLUE = ( 60,  60, 100)
-WHITE    = (255, 255, 255)
-RED      = (255,   0,   0)
-GREEN    = (  0, 255,   0)
-BLUE     = (  0,   0, 255)
-YELLOW   = (255, 255,   0)
-ORANGE   = (255, 128,   0)
-PURPLE   = (255,   0, 255)
-CYAN     = (  0, 255, 255)
-
-##Define some useful colours
-BLACK = (0,0,0)
-#white = (255,255,255)
-#blue = (0,0,255)
-#red = (150,0,0)
-#green = (0,150,0)
-#bright_red = (255,0,0)
-#bright_green = (0,255,0)
-#yellow = (255,255,0)
-  
-BGCOLOR = NAVYBLUE
+#                 R    G    B
+GRAY          = (100, 100, 100)
+WHITE         = (255, 255, 255)
+RED           = (255,   0,   0)
+GREEN         = (  0, 255,   0)
+BLUE          = (  0,   0, 255)
+YELLOW        = (255, 255,   0)
+ORANGE        = (255, 128,   0)
+PURPLE        = (255,   0, 255)
+CYAN          = (  0, 255, 255)
+BLACK         = (  0,   0,   0)
+BRIGHT_GREEN  = (  0, 255,   0)
+BRIGHT_RED    = (255,   0,   0)
+NAVYBLUE      = ( 60,  60, 100)
 
 class Game(list,object):
     
