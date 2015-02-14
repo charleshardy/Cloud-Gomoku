@@ -3,12 +3,14 @@
 """This program is a five in row game, which is used for the coding
 camp 2015 in WindRiver.com"""
 
-# -*- coding: utf-8 -*-
-from pygame import *
+import os
+import pygame as pg
 import socket
 import threading
 import json
-    
+from toolbox import button
+
+
 #                 R    G    B
 GRAY          = (100, 100, 100)
 WHITE         = (255, 255, 255)
@@ -24,309 +26,277 @@ BRIGHT_GREEN  = (  0, 255,   0)
 BRIGHT_RED    = (255,   0,   0)
 NAVYBLUE      = ( 60,  60, 100)
 
-class Game(list,object):
+SCREEN_WIDTH = 800
+SCREEN_HIGHT = 600
+
+#CHESS_BLOCK_COUNTS = 15
+
+#class Game(list,object):
+if __name__ == '__main__':
+    class Game:
+        def __init__(self):
+
+            pg.init()
+            pg.display.init()
+
+            self.done = False
+            self.clock = pg.time.Clock()
     
-    # initialize display
-    init()
-    display.init()
-
-    black = image.load('Images/Black.png')
-    white = image.load('Images/White.png')
-    # load background image
-    board = image.load('Images/Board.png')
-    
-    def __init__(self):
-
-        # 0 Init Env
-        self.scr = display.set_mode((800,600))
-
-        # start fullscreen mode
-        #self.scr = display.set_mode((800, 600), FULLSCREEN)
-        # turn off the mouse pointer
-        #mouse.set_visible(0)
-
-        self.board_margin_left = 18
-        self.board_margin_top = 15
-
-        self.block_width = 46
-        self.block_hight = 40
-
-        self.chess_radius = 18
-
-        shrinkx = 800
-        shrinky = 600
-
-        # start fullscreen mode
-        # turn off the mouse pointer
-        #pygame.mouse.set_visible(0)
-
-        self.init_client_conn()
-
-        # Start a thread to read rom socket then add a event
-        T = threading.Thread(target=self.read)
-        T.start()
-
-        # 1 Regist
-
-#        # 2 Get id and role from server (client - 1 /host - 0)
-#        # Reponse from server in Jason format :
-        #{
-#        #   "Client ID": "1",
-#        #   "Command ID":  "1",
-#        #   "Command":  "Show Board",
-#        #   "CMD Parameters": "15x15"
-#        #},
-
-        self.clientId = "-1"
-        while self.clientId == "-1":
-            ev = event.wait()
-            print ('## ev.data %s' % str(ev))
-            if ev.type == USEREVENT+1:
-                #print ('## 1 ### ev.data %s' % ev.data)
-                if ev.data['action'] == 'assigned':
-                    #print ('type(ev.data) %s' % str(type(ev.data)))
-                    self.clientId = ev.data['clientId']
-                    self.clientRole = ev.data['clientRole']
-                    print "clientId:", self.clientId
-                    print "clientRole:", self.clientRole
-                    break
-                else: event.post(ev)
-            elif ev.type == KEYDOWN and ev.key == K_ESCAPE or ev.type == QUIT:
-                #self.game_over = True
-                self.clientId = "quit"
-
-
-        # 3 Show Board
-
-        del(self[:])
-        self.extend([['_']*15 for foo in range(15)])
-
-        image = transform.smoothscale(self.board, (shrinkx, shrinky))
-        self.scr.blit(image, (0,0))
-        display.flip()
-
-
-        #largeText = pygame.font.SysFont("comicsansms",115)
-        #largeText = font.SysFont("comicsansms",115)
-        #TextSurf, TextRect = text_objects("A bit Racey", largeText)
-        #TextRect.center = ((1024/2),(768/2))
-        #self.scr.blit(TextSurf, TextRect)
-    
-        #button("GO!",150,450,100,50,green,bright_green,game_loop)
-        self.button("Quit",700,500,100,50,YELLOW,ORANGE,self.quitgame)
-    
-        display.update()
-
-        ## Server logical
-        #self.turn = 120
-
-#        grid = [[0 for x in range(10)] for y in range(10)]
-#        initial_value = 0
-#        list_length = 5
-#        [[x[1]-y[1] for y in TeamList] for x in TeamList]
-#        sample_list = [ () for i in range(10)]
-#        sample_list = [initial_value]*list_length
-#        # sample_list ==[0,0,0,0,0]
-#
-#        self.playable_pos = [(1,1), (9,9)]
-#        self.playable_pos = [(9,9)]
-
-        # Let server known after chess board shown done?
-        data = {'clientId':self.clientId, 'action':'show board', 'status':'done'}
-        #try: self.conn.send('"show board done"'.encode('UTF-8'))
-        try: self.conn.send(json.dumps(data))
-        except: print('pipe broken')
+            self.black = pg.image.load('Images/Black.png')
+            self.white = pg.image.load('Images/White.png')
+            # load background image
+            self.board = pg.image.load('Images/Board.png')
         
-        ### Your turn: Put down the first chess at the center of the board
-        self.your_turn = True 
-        #if self.clientRole == "host":
-        #    event.post(event.Event(MOUSEBUTTONUP,{'button':1,'pos':(270,270)}))
-
-        # 4 Gaming (end natually/quit/replay/)
-        # Get actions from server
-        # Take actions when gets data from socket
-        self.game_over = False
-        while not self.game_over: self.gaming()
-
-        # Show Game results
-        # self.game_over = False
-
-        # 5 Quit
-        ## Tell server to quit from socket
-        #try: self.conn.send('"quit"'.encode('UTF-8'))
-        #except: print('pipe broken')
-
-        data = {'clientId':'0','action':'quit'}
-        try: self.conn.send(json.dumps(data))
-        except: print('pipe broken')
-
-        T.join()
-
-        self.conn.close()
-
-        #exit()
+            # start fullscreen mode
+            self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
+            #self.scr = pg.display.set_mode((800, 600), FULLSCREEN)
     
-    def init_client_conn(self):
-        soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        soc.settimeout(5.0)
-        foo = True # pour break un double-while
-        while foo:
-            #ip = entry('host ip   : <15,15>',width = 280)
-            ip = ["127.0.0.1"]
-            if not ip or not ip[0]: print('exit');exit()
-            while True:
-                try:
-                    print('try to connect...')
-                    soc.connect((ip[0],50007))
-                    foo = False
-                    print('connected')
-                    break
-                except socket.timeout:
-                    print('good ip ... ?')
-                    break
-                except socket.error:
-                    print('...refused')
-                    time.wait(1000)
-                    for ev in event.get():
-                        if ev.type == QUIT:
-                            print('exit game')
-                            exit()
-            self.conn = soc
-        soc.settimeout(None)
+            # turn off the mouse pointer
+            #pg.mouse.set_visible(0)
+    
+            self.board_margin_left = 18
+            self.board_margin_top = 15
+    
+            self.block_width = 46
+            self.block_hight = 40
+    
+            self.chess_radius = 18
+    
+            self.shrinkx = SCREEN_WIDTH
+            self.shrinky = SCREEN_HIGHT
+    
+    
+            self.init_client_conn()
+    
+            # Start a thread to read rom socket then add a event
+            self.T = threading.Thread(target=self.read)
+            self.T.start()
+    
+            # 1 Regist
+    
+            # 2 Get id and role from server (clientId is 0 as the host)
+            # Reponse from server in Jason format :
+            #{
+            #   "action"     : "assigned",
+            #   "clientID"   : "0",
+            #   "clientRole" :  "host",
+            #}
+            self.clientId = "-1"
 
-    def gaming(self):
-
-        for ev in event.get():
-            #print ('### 1 ###  ev %s' % str(ev))
-            if self.game_over == True:
-                return
-
-            if ev.type == KEYDOWN and ev.key == K_ESCAPE or ev.type == QUIT:
-                self.game_over = True
-                return
-            elif ev.type == USEREVENT+1:
-                #print "### ev.data", ev.data
-                if ev.data['clientId'] == self.clientId and  ev.data['action'] == "put chess":
-                    print "Your turn please!"
-                    self.your_turn = True
-                    break
-                elif ev.data['action'] == "update chess":
-                    print "###1  ev.data", ev.data
-                    #pos = str(ev.data['pos'].split(","))
-                    #print "pos:", pos
-                    #pos = str(ev.data['pos'])
-                    x,y = ev.data['pos']
-                    print "### x, y##", x, y
-                    #for x, y in pos.split(",")
-                    self.put_pawn(x,y, Game.white)
-                    self.your_turn = True
-                    break
-                else:
-                    print ('Unhandled user event %s' % str(ev.data))
-                    break
-
-            elif self.your_turn == True and ev.type == MOUSEBUTTONUP and ev.button == 1:
-                 print "put my chess"
-                 x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
-                 print "### ev.pos[0]", ev.pos[0]
-                 print "### ev.pos[1]", ev.pos[1]
-
-                 x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
-                 #if (x,y) in self.playable_pos:
-                 self.put_pawn(x,y, Game.black)
-                 data = {'clientId':self.clientId, 'action':'put chess', 'pos':[x, y]}
-                 try: self.conn.send(json.dumps(data))
-                 except: print('pipe broken')
-                 self.your_turn = False
-            #else: print ('Unhandled event %s' % str(ev))
-
-            time.wait(10)
+            while self.clientId == "-1":
+                ev = pg.event.wait()
+                if ev.type == pg.KEYDOWN and ev.key == pg.K_ESCAPE or ev.type == pg.QUIT:
+                    self.done = True
+                    self.quit()
+                elif ev.type == pg.USEREVENT+1:
+                    if ev.data['action'] == 'assigned':
+                        self.clientId = ev.data['clientId']
+                        self.clientRole = ev.data['clientRole']
+                        break
+                    else: event.post(ev)
+    
+            # 3 Show Board
+    
+            #del(self[:])
+            #self.extend([['_']*15 for foo in range(15)])
+    
+            image = pg.transform.smoothscale(self.board, (self.shrinkx, self.shrinky))
+            self.scr.blit(image, (0,0))
+            pg.display.flip()
+    
+            #largeText = pygame.font.SysFont("comicsansms",115)
+            #largeText = font.SysFont("comicsansms",115)
+            #TextSurf, TextRect = text_objects("A bit Racey", largeText)
+            #TextRect.center = ((1024/2),(768/2))
+            #self.scr.blit(TextSurf, TextRect)
+        
+            #self.button("Quit",SCREEN_WIDTH - self.board_margin_left * 2 - self.block_width * 15 + 10, 500,80,50,YELLOW,ORANGE,self.quitgame)
+            button_config = {
+                "clicked_font_color" : (0,0,0),
+                "hover_font_color"   : (205,195, 0),
+                'font_color'         : (255,255,255),
+                'border_color'       : (0,0,0),
+                'border_hover_color' : (100,100,100),
+            }
+    
+            self.btn1 = button.Button((self.board_margin_left * 2 + self.block_width * 14 + 10, 500, 100,35), (0,0,100), 
+                self.quit_click, text='QUIT', 
+                clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
+    
+            self.buttons = [self.btn1]
+    
+            pg.display.update()
+    
+            ## Server logical
+            #self.turn = 120
+    
+    #        grid = [[0 for x in range(10)] for y in range(10)]
+    #        initial_value = 0
+    #        list_length = 5
+    #        [[x[1]-y[1] for y in TeamList] for x in TeamList]
+    #        sample_list = [ () for i in range(10)]
+    #        sample_list = [initial_value]*list_length
+    #        # sample_list ==[0,0,0,0,0]
+    #
+    #        self.playable_pos = [(1,1), (9,9)]
+    #        self.playable_pos = [(9,9)]
+    
+            # Let server known after chess board shown done?
+            data = {'clientId':self.clientId, 'action':'show board', 'status':'done'}
+            #try: self.conn.send('"show board done"'.encode('UTF-8'))
+            try: self.conn.send(json.dumps(data))
+            except: print('pipe broken')
             
-    def put_pawn(self,x,y,color):
-        #display.update(self.scr.blit(Game.black if self.your_turn else Game.white,(x*30-2,y*30-2)))
-        #display.update(self.scr.blit(color,(x*self.block_width-2,y*self.block_width-2)))
-        display.update(self.scr.blit(color,(x*self.block_width+self.board_margin_left - self.chess_radius, y*self.block_hight + self.board_margin_top - self.chess_radius)))
+            ### Your turn: Put down the first chess at the center of the board
+            self.your_turn = True 
+            #if self.clientRole == "host":
+            #    event.post(event.Event(MOUSEBUTTONUP,{'button':1,'pos':(270,270)}))
+    
+            # 4 Gaming/run (end natually/quit/replay/)
+            # Get actions from server
+            # Take actions when gets data from socket
 
-    def read(self):
-        while True:
-            #try: data = eval(self.conn.recv(8))
-            try: data = json.loads(self.conn.recv(1024))
-            except:
-                print('pipe broken')
-                data = 'quit'
-            if data == 'quit':
-                self.game_over = True
-                break
-            event.post(event.Event(USEREVENT+1,{'data':data}))
-            print "# rec data:", data
-            #self.your_turn = False
+            #self.done = False
+            #while not self.done: self.gaming()
+    
+            # Show Game results
+            # self.done = False
+    
+            # 5 Quit
+            ## Tell server to quit from socket
+            #try: self.conn.send('"quit"'.encode('UTF-8'))
+            #except: print('pipe broken')
+    
+            #data = {'clientId':'0','action':'quit'}
+            #try: self.conn.send(json.dumps(data))
+            #except: print('pipe broken')
+    
+       
+            #exit()
         
-    def text_objects(self,text,font):
-        '''Renders the font on the screen and puts it in a rectangle'''
-        textSurface = font.render(text,True , BLACK)
-        return textSurface, textSurface.get_rect()
-
-    def button(self, msg,x,y,w,h,ic,ac,action=None):
-        mouse_pos = mouse.get_pos()
-        click = mouse.get_pressed()
-        print(click)
-        if x+w > mouse_pos[0] > x and y+h > mouse_pos[1] > y:
-            draw.rect(self.scr, ac,(x,y,w,h))
+        def init_client_conn(self):
+            self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.soc.settimeout(5.0)
+            foo = True # pour break un double-while
+            while foo:
+                #ip = entry('host ip   : <15,15>',width = 280)
+                ip = ["127.0.0.1"]
+                if not ip or not ip[0]: print('exit');exit()
+                while True:
+                    try:
+                        print('try to connect...')
+                        self.soc.connect((ip[0],50007))
+                        foo = False
+                        print('connected')
+                        break
+                    except socket.timeout:
+                        print('good ip ... ?')
+                        break
+                    except socket.error:
+                        print('...refused')
+                        pg.time.wait(1000)
+                        for ev in pg.event.get():
+                            if ev.type == pg.QUIT:
+                                print('exit game')
+                                exit()
+                self.conn = self.soc
+            self.soc.settimeout(None)
     
-            if click[0] == 1 and action != None:
-                action()         
-        else:
-            draw.rect(self.scr, ic,(x,y,w,h))
+                
+        def put_pawn(self,x,y,color):
+            pg.display.update(self.scr.blit(color,
+                (x*self.block_width+self.board_margin_left - self.chess_radius, 
+                y*self.block_hight + self.board_margin_top - self.chess_radius)))
     
-        #smallText = font.SysFont("comicsansms",20)
-        smallText = font.SysFont("Arial", 20)
-        textSurf, textRect = self.text_objects(msg, smallText)
-        textRect.center = ( (x+(w/2)), (y+(h/2)) )
-        self.scr.blit(textSurf, textRect)
+        def read(self):
+            #self.soc.setblocking(0)
+            while not self.done:
+                try: data = json.loads(self.conn.recv(1024))
+                except:
+                    print('pipe broken')
+                    data = 'quit'
+                if data == 'quit':
+                    self.done = True
+                    break
+                pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':data}))
+                print "# rec data:", data
+            print "## thread exit"
+            
+        def quit_click(self):
+            #print('Quit button pressed')
+            self.done = True
+            self.quit()
+    
+        def events(self):
+            for ev in pg.event.get():
 
-    def quitgame(self):
-        self.game_over = True
+                if ev.type == pg.KEYDOWN and ev.key == pg.K_ESCAPE or ev.type == pg.QUIT:
+                    self.done = True
+                    self.quit()
+                    #break
 
-##class Button:
-##
-##    __init__(self, name, position, image_file, sound_file):
-##         self.name = name
-##         self.image = pygame.image.load(image_file)
-##         self.sound = pygame.mixer.Sound(sound_file)
-##         self.position = position
-##
-##         self.rect = pygame.Rect(position, self.image.get_size())
-##
-##buttons = []
-##buttons.add( Button("red", (0,0), "red.png", "red.mp3") )
-##...
-##
-##Then you can use it in the main loop:
-##
-##while True:
-##    for event in pygame.event.get():
-##        if event.type==pygame.QUIT:
-##            raise SystemExit
-##        elif event.type==pygame.MOUSEBUTTONDOWN:
-##            for b in buttons:
-##                 if b.rect.collidepoint(event.pos):
-##                      b.sound.play()
-##
+                for button in self.buttons:
+                    button.check_event(ev)
 
+                if ev.type == pg.USEREVENT+1:
+                    #if ev.data['action'] == 'assigned':
+                    #    self.clientId = ev.data['clientId']
+                    #    self.clientRole = ev.data['clientRole']
 
-Game()
+                    if ev.data['action'] == "put chess" and ev.data['clientId'] == self.clientId:
+                        print "Your turn please!"
+                        self.your_turn = True
 
+                    elif ev.data['action'] == "update chess":
+                        x,y = ev.data['pos']
+                        self.put_pawn(x,y, self.white)
+                        self.your_turn = True
 
-##if __name__ == '__main__':
-##    # check input parameters
-##    if len(sys.argv) < 2:
-##        print ("Usage: %s ImageFile [-t] [-convert_alpha]" % sys.argv[0])
-##        print ("       [-t] = Run Speed Test\n")
-##        print ("       [-convert_alpha] = Use convert_alpha() on the surf.\n")
-##    else:
-##        main(sys.argv[1],
-##             convert_alpha = '-convert_alpha' in sys.argv,
-##             run_speed_test = '-t' in sys.argv)
+                    else:
+                        print ('Unhandled other USER event %s' % str(ev.data))
+    
+                elif self.your_turn == True and ev.type == pg.MOUSEBUTTONUP and ev.button == 1:
+                     #print "put my chess"
+                     x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
+                     #print "### ev.pos[0]", ev.pos[0]
+                     #print "### ev.pos[1]", ev.pos[1]
+    
+                     x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
+                     #if (x,y) in self.playable_pos:
+                     if x < 15 and y < 15:
+                         self.put_pawn(x,y, self.black)
+                         data = {'clientId':self.clientId, 'action':'put chess', 'pos':[x, y]}
+                         try: self.conn.send(json.dumps(data))
+                         except: print('pipe broken')
+                         self.your_turn = False
+    
+        def update(self):
+            pass
+    
+        def render(self):
+            #self.screen.fill((255,255,255))
+            for button in self.buttons:
+                button.render(self.scr)
+    
+        def run(self):
+            while not self.done:
+                self.events()
+                self.update()
+                self.render()
+                pg.display.update()
+                self.clock.tick(60)
 
-quit()
+        def quit(self):
+            print "### 1"
+            self.conn.close()
+            print "### 2"
+            self.T.join(2)
+            print "### 3"
+            pg.quit()
+            print "### 4"
+            exit()
+
+    app = Game()
+    app.run()
+    app.quit()
