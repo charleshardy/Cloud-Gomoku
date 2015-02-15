@@ -9,6 +9,8 @@ import socket
 import threading
 import json
 from toolbox import button
+from toolbox import tools
+
 
 
 #                 R    G    B
@@ -31,9 +33,8 @@ SCREEN_HIGHT = 600
 
 #CHESS_BLOCK_COUNTS = 15
 
-#class Game(list,object):
 if __name__ == '__main__':
-    class Game:
+    class Game(tools.States):
         def __init__(self):
 
             pg.init()
@@ -42,10 +43,10 @@ if __name__ == '__main__':
             self.done = False
             self.clock = pg.time.Clock()
     
-            self.black = pg.image.load('Images/Black.png')
-            self.white = pg.image.load('Images/White.png')
+            self.black = pg.image.load('resources/images/Black.png')
+            self.white = pg.image.load('resources/images/White.png')
             # load background image
-            self.board = pg.image.load('Images/Board.png')
+            self.board = pg.image.load('resources/images/Board.png')
         
             # start fullscreen mode
             self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
@@ -65,7 +66,23 @@ if __name__ == '__main__':
             self.shrinkx = SCREEN_WIDTH
             self.shrinky = SCREEN_HIGHT
     
-    
+            tools.States.__init__(self)
+
+            self.won_game = False
+
+            self.screen_rect = self.scr.get_rect()
+
+            self.overlay = pg.Surface((self.screen_rect.width, self.screen_rect.height))
+            self.overlay.fill(0)
+            self.overlay.set_alpha(0)
+
+            self.X = 0
+            self.Y = 0
+ 
+            self.last_put_X = 16
+            self.last_put_Y = 16
+            self.last_put_color = self.black
+
             self.init_client_conn()
     
             # Start a thread to read rom socket then add a event
@@ -87,7 +104,7 @@ if __name__ == '__main__':
                 ev = pg.event.wait()
                 if ev.type == pg.KEYDOWN and ev.key == pg.K_ESCAPE or ev.type == pg.QUIT:
                     self.done = True
-                    self.quit()
+                    self.clean()
                 elif ev.type == pg.USEREVENT+1:
                     if ev.data['action'] == 'assigned':
                         self.clientId = ev.data['clientId']
@@ -96,61 +113,46 @@ if __name__ == '__main__':
                     else: event.post(ev)
     
             # 3 Show Board
-    
-            #del(self[:])
-            #self.extend([['_']*15 for foo in range(15)])
-    
-            image = pg.transform.smoothscale(self.board, (self.shrinkx, self.shrinky))
-            self.scr.blit(image, (0,0))
+            self.board_image = pg.transform.smoothscale(self.board, (self.shrinkx, self.shrinky))
+            self.scr.blit(self.board_image, (0,0))
             pg.display.flip()
     
-            #largeText = pygame.font.SysFont("comicsansms",115)
-            #largeText = font.SysFont("comicsansms",115)
-            #TextSurf, TextRect = text_objects("A bit Racey", largeText)
-            #TextRect.center = ((1024/2),(768/2))
-            #self.scr.blit(TextSurf, TextRect)
-        
-            #self.button("Quit",SCREEN_WIDTH - self.board_margin_left * 2 - self.block_width * 15 + 10, 500,80,50,YELLOW,ORANGE,self.quitgame)
-            button_config = {
-                "clicked_font_color" : (0,0,0),
-                "hover_font_color"   : (205,195, 0),
-                'font_color'         : (255,255,255),
-                'border_color'       : (0,0,0),
-                'border_hover_color' : (100,100,100),
-            }
-    
-            self.btn1 = button.Button((self.board_margin_left * 2 + self.block_width * 14 + 10, 500, 100,35), (0,0,100), 
-                self.quit_click, text='QUIT', 
-                clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
-    
-            self.buttons = [self.btn1]
+
+            self.setup_btns()
+            
+            # Guest1
+            pg.display.update(self.scr.blit(self.white,
+                (14*self.block_width+self.board_margin_left * 2 + 20, 
+                2*self.block_hight + self.board_margin_top)))
+
+            text = "Guest1"
+            self.guest_text, self.guest_rect = self.make_text(text, YELLOW, 
+                (14*self.block_width+self.board_margin_left * 2 + self.chess_radius * 2 + 20 + 20 + 5, 
+                2*self.block_hight + self.board_margin_top + self.chess_radius), 
+                20)
+
+            # You
+            pg.display.update(self.scr.blit(self.black,
+                (14*self.block_width+self.board_margin_left * 2 + 20, 
+                10*self.block_hight + self.board_margin_top)))
+
+            text = "You" 
+            self.host_text, self.host_rect = self.make_text(text, YELLOW, 
+                (14*self.block_width+self.board_margin_left * 2 + self.chess_radius * 2 + 20 + 20, 
+                10*self.block_hight + self.board_margin_top + self.chess_radius), 
+                20)
     
             pg.display.update()
     
-            ## Server logical
-            #self.turn = 120
-    
-    #        grid = [[0 for x in range(10)] for y in range(10)]
-    #        initial_value = 0
-    #        list_length = 5
-    #        [[x[1]-y[1] for y in TeamList] for x in TeamList]
-    #        sample_list = [ () for i in range(10)]
-    #        sample_list = [initial_value]*list_length
-    #        # sample_list ==[0,0,0,0,0]
-    #
-    #        self.playable_pos = [(1,1), (9,9)]
-    #        self.playable_pos = [(9,9)]
-    
+            self.grid = [[0 for x in range(15)] for y in range(15)]
+
             # Let server known after chess board shown done?
             data = {'clientId':self.clientId, 'action':'show board', 'status':'done'}
-            #try: self.conn.send('"show board done"'.encode('UTF-8'))
             try: self.conn.send(json.dumps(data))
             except: print('pipe broken')
             
             ### Your turn: Put down the first chess at the center of the board
             self.your_turn = True 
-            #if self.clientRole == "host":
-            #    event.post(event.Event(MOUSEBUTTONUP,{'button':1,'pos':(270,270)}))
     
             # 4 Gaming/run (end natually/quit/replay/)
             # Get actions from server
@@ -171,7 +173,6 @@ if __name__ == '__main__':
             #try: self.conn.send(json.dumps(data))
             #except: print('pipe broken')
     
-       
             #exit()
         
         def init_client_conn(self):
@@ -203,12 +204,126 @@ if __name__ == '__main__':
                 self.conn = self.soc
             self.soc.settimeout(None)
     
-                
+        def set_last_chess_prompt(self, x, y):
+            # left top
+            # -
+            pg.display.update(self.scr.fill(pg.Color('red'),
+                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)))
+
+            # |
+            pg.display.update(self.scr.fill(pg.Color('red'),
+                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)))
+
+            # right down
+            pg.display.update(self.scr.fill(pg.Color('red'),
+                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
+                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8,2,8)))
+
+            # -
+            pg.display.update(self.scr.fill(pg.Color('red'),
+                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
+                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)))
+            # ----------------------------------------------------
+            # left down 
+            # -
+            pg.display.update(self.scr.fill(pg.Color('red'),
+                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2, 8,2)))
+            # |
+            pg.display.update(self.scr.fill(pg.Color('red'),
+                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8, 2,8)))
+
+            # right top
+            # -
+            pg.display.update(self.scr.fill(pg.Color('red'),
+                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
+                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)))
+            # |
+            pg.display.update(self.scr.fill(pg.Color('red'),
+                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
+                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)))
+
+            if self.last_put_X < 15 and self.last_put_Y < 15:
+                # left top
+                r1 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                        self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)
+                self.scr.blit(self.board_image,r1,r1)
+
+                r2 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                        self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)
+                self.scr.blit(self.board_image,r2,r2)
+
+                # right top
+                r3 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
+                        self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8,2,8)
+                self.scr.blit(self.board_image,r3,r3)
+
+                r4 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
+                        self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)
+                self.scr.blit(self.board_image,r4,r4)
+
+                # ----------------------------------------------           
+                # left down
+                r5 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                        self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)
+                self.scr.blit(self.board_image,r5,r5)
+
+                r6 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                        self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8 ,2,8)
+                self.scr.blit(self.board_image,r6,r6)
+
+                # right down
+                r7 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
+                        self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1 ,8,2)
+                self.scr.blit(self.board_image,r7,r7)
+
+                r8 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
+                        self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1 ,2,8)
+                self.scr.blit(self.board_image,r8,r8)
+                 
         def put_pawn(self,x,y,color):
+            print ("### put chess (x: %s, y: %s)" % (x,y))
             pg.display.update(self.scr.blit(color,
                 (x*self.block_width+self.board_margin_left - self.chess_radius, 
                 y*self.block_hight + self.board_margin_top - self.chess_radius)))
+
+            self.set_last_chess_prompt(x,y)
+
+            self.last_put_X = x
+            self.last_put_Y = y
+            self.last_put_color = color
+
+        def setup_btns(self):
+            button_config = {
+                "clicked_font_color" : (0,0,0),
+                "hover_font_color"   : (205,195, 0),
+                'font_color'         : (255,255,255),
+                'font'               : tools.Font.load('impact.ttf', 18),
+                'border_color'       : (0,0,0),
+                'border_hover_color' : (100,100,100),
+            }
+
+#            button_config = {
+#                "clicked_font_color" : (0,0,0),
+#                "hover_font_color"   : (205,195, 0),
+#                'font'               : tools.Font.load('impact.ttf', 18),
+#                'font_color'         : (255,255,255),
+#                'border_color'       : (0,0,0),
+#            }
     
+            self.btn1 = button.Button((self.board_margin_left * 2 + self.block_width * 14 + 10, 500, 100,35), (0,0,100), 
+                self.quit_click, text='QUIT', 
+                clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
+
+            self.btn2 = button.Button((self.board_margin_left * 2 + self.block_width * 14 + 10, 10, 100,35), (0,0,100), 
+                self.test_click, text='TEST', 
+                clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
+    
+            self.buttons = [self.btn1, self.btn2]
+
         def read(self):
             #self.soc.setblocking(0)
             while not self.done:
@@ -224,16 +339,34 @@ if __name__ == '__main__':
             print "## thread exit"
             
         def quit_click(self):
-            #print('Quit button pressed')
             self.done = True
-            self.quit()
-    
+
+        def show_how_won(self, (x1, y1), (x2, y2)):
+            x1_pos = x1*self.block_width + self.board_margin_left
+            y1_pos = y1*self.block_hight + self.board_margin_top 
+            x2_pos = x2*self.block_width + self.board_margin_left
+            y2_pos = y2*self.block_hight + self.board_margin_top 
+            r = pg.draw.line(self.scr, RED, (x1_pos,y1_pos), (x2_pos,y2_pos), 2)
+            pg.display.update(r)
+
+        def test_click(self):
+            self.won_game = True
+            start_pos = (2,2)
+            end_pos = (6,6)
+            self.show_how_won(start_pos, end_pos)
+
+            print('TEST button pressed')
+
+        def easefocus(self,x,y):
+            r = pg.Rect(x*self.block_width + self.board_margin_left - self.chess_radius, y*self.block_hight + self.board_margin_top - self.chess_radius,self.chess_radius * 2,self.chess_radius * 2)
+            self.scr.blit(self.board_image,r,r)
+            return r
+
         def events(self):
             for ev in pg.event.get():
 
                 if ev.type == pg.KEYDOWN and ev.key == pg.K_ESCAPE or ev.type == pg.QUIT:
                     self.done = True
-                    self.quit()
                     #break
 
                 for button in self.buttons:
@@ -251,33 +384,90 @@ if __name__ == '__main__':
                     elif ev.data['action'] == "update chess":
                         x,y = ev.data['pos']
                         self.put_pawn(x,y, self.white)
+                        #self.put_pawn(x,y, 'white')
+                        self.grid[x][y] = 2 # 2: white
                         self.your_turn = True
 
                     else:
                         print ('Unhandled other USER event %s' % str(ev.data))
     
                 elif self.your_turn == True and ev.type == pg.MOUSEBUTTONUP and ev.button == 1:
-                     #print "put my chess"
                      x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
-                     #print "### ev.pos[0]", ev.pos[0]
-                     #print "### ev.pos[1]", ev.pos[1]
-    
-                     x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
-                     #if (x,y) in self.playable_pos:
                      if x < 15 and y < 15:
-                         self.put_pawn(x,y, self.black)
-                         data = {'clientId':self.clientId, 'action':'put chess', 'pos':[x, y]}
-                         try: self.conn.send(json.dumps(data))
-                         except: print('pipe broken')
-                         self.your_turn = False
+                         if self.grid[x][y] == 0:
+                             self.put_pawn(x,y, self.black)
+                             self.grid[x][y] = 1 # 1: black
+                             print "### 1 ### grid[x][y]", str(self.grid[x][y])
+                             data = {'clientId':self.clientId, 'action':'put chess', 'pos':[x, y]}
+                             try: self.conn.send(json.dumps(data))
+                             except: print('pipe broken')
+                             self.your_turn = False
+                #elif self.your_turn == True and ev.type == pg.MOUSEMOTION:
+                elif ev.type == pg.MOUSEMOTION:
+                     x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
+                     if x < 15 and y < 15 and not self.won_game:
+                         if self.grid[self.X][self.Y] == 0:
+                             r = self.easefocus(self.X,self.Y)
+                         if self.grid[x][y] == 0:
+                             pg.display.update(self.scr.blit(self.black, 
+                                 (x*self.block_width+self.board_margin_left - self.chess_radius, 
+                                 y*self.block_hight + self.board_margin_top - self.chess_radius)))
+
+                             self.X = x
+                             self.Y = y
+
+        #def won_game(self):
+        #    return True
+
+     
+        def update_label(self):
     
-        def update(self):
+            #self.sec_timelapse, self.sec_timelapse_rect = self.make_text('Sec: {}'.format(self.timelapse), (0,0,0), (60, 150), 20)
+    
+            ##best = DB.load()['save']['shortest']
+            #if not self.best:
+            #    best = None
+            #else:
+            #    best = self.best
+            #self.shortest_time_text, self.shortest_time_rect = self.make_text('Best: {}'.format(best), (0,0,0), (60, 175), 20)
             pass
+    
+
+        def update(self):
+            msg = 'Game Over'
+            if self.won_game:
+                msg = 'You Won'
+            self.game_over, self.game_over_rect = self.make_text(msg, RED, self.screen_rect.center, 50)
+    
+            #self.games_won_text, self.games_won_rect = self.make_text('Won: {}'.format(self.games_won), (0,0,0), (60, 200), 20)
+            #self.games_lost_text, self.games_lost_rect = self.make_text('Lost: {}'.format(self.games_lost), (0,0,0), (60, 225), 20)
+            #self.points_text, self.points_rect = self.make_text('Points:', (0,0,0), (60, 250), 20)
+            #self.points_num_text, self.points_num_rect = self.make_text('{}'.format(self.points), (0,0,0), (60, 275), 20)
+            #pass
     
         def render(self):
             #self.screen.fill((255,255,255))
             for button in self.buttons:
                 button.render(self.scr)
+
+            self.scr.blit(self.host_text, self.host_rect)
+            self.scr.blit(self.guest_text, self.guest_rect)
+
+            #self.scr.blit(self.games_won_text, self.games_won_rect)
+            #self.scr.blit(self.games_lost_text, self.games_lost_rect)
+            #self.scr.blit(self.sec_timelapse, self.sec_timelapse_rect)
+
+            #if self.lost_game or self.won_game():
+            if self.won_game:
+                self.scr.blit(self.overlay, (0,0))
+                self.scr.blit(self.game_over, self.game_over_rect)
+
+            #self.scr.blit(self.chess_cursor, self.chess_cursor_rect)
+            #pg.draw.rect(self.scr, (255, 255, 255, 127), pg.Rect(0, 0, 100, 75))
+
+            #self.scr.blit(self.sec_timelapse, self.sec_timelapse_rect)
+            #pg.draw.rect(self.scr, (255, 255, 255, 127), pg.Rect(0, 0, 100, 75))
+            #pg.draw.rect(self.scr, (255, 255, 255, 127), pg.Rect(0, 0, 100, 75))
     
         def run(self):
             while not self.done:
@@ -287,16 +477,17 @@ if __name__ == '__main__':
                 pg.display.update()
                 self.clock.tick(60)
 
-        def quit(self):
+        def clean(self):
             print "### 1"
             self.conn.close()
             print "### 2"
-            self.T.join(2)
+            self.T.join(1)
             print "### 3"
             pg.quit()
             print "### 4"
             exit()
+            #sys.exit(0)
 
     app = Game()
     app.run()
-    app.quit()
+    app.clean()
