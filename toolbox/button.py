@@ -27,8 +27,8 @@ class Button(object):
             "font_color"        : pg.Color("white"),
             "hover_font_color"  : None,
             "clicked_font_color": None,
-            "click_sound"       : None,
-            "hover_sound"       : None,
+#            "click_sound"       : None,
+#            "hover_sound"       : None,
             'border_color'      : pg.Color('black'),
             'border_hover_color': pg.Color('yellow'),
             'disabled'          : False,
@@ -78,8 +78,8 @@ class Button(object):
         if self.rect.collidepoint(pg.mouse.get_pos()):
             if not self.hovered:
                 self.hovered = True
-                if self.hover_sound:
-                    self.hover_sound.play()
+#                if self.hover_sound:
+#                    self.hover_sound.play()
         else:
             self.hovered = False
 
