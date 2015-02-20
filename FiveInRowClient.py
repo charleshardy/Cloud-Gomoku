@@ -11,6 +11,14 @@ import json
 from toolbox import button
 from toolbox import tools
 
+# Cloud API
+from node import Node
+from config import mashery_cloud_config
+
+#TODO
+#from ..pyCloundAPILib import *
+#from ..pyCloundAPILib.node import Node
+#from ..pyCloundAPILib.config import mashery_cloud_config
 
 
 #                 R    G    B
@@ -28,67 +36,73 @@ BRIGHT_GREEN  = (  0, 255,   0)
 BRIGHT_RED    = (255,   0,   0)
 NAVYBLUE      = ( 60,  60, 100)
 
-SCREEN_WIDTH = 800
-SCREEN_HIGHT = 600
+GRID_LINE     = (105,  50,   6)
 
-#CHESS_BLOCK_COUNTS = 15
+#CHESS_BOARD_BLOCK_COUNTS = 14
+#CHESS_BOARD_BLOCK_COUNTS = 8
+CHESS_BOARD_BLOCK_COUNTS = 10
+
+#touchscreen = False
+touchscreen = True
 
 if __name__ == '__main__':
+
+    if touchscreen == True:
+        SCREEN_WIDTH = 320
+        SCREEN_HIGHT = 240
+    else:
+        SCREEN_WIDTH = 800
+        SCREEN_HIGHT = 600
+
     class Game(tools.States):
         def __init__(self):
 
             pg.init()
-            pg.display.init()
 
             self.done = False
-            self.clock = pg.time.Clock()
-    
-            self.black = pg.image.load('resources/images/Black.png')
-            self.white = pg.image.load('resources/images/White.png')
-            # load background image
-            self.board = pg.image.load('resources/images/Board.png')
-        
-            # start fullscreen mode
+
             self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
-            #self.scr = pg.display.set_mode((800, 600), FULLSCREEN)
-    
-            # turn off the mouse pointer
-            #pg.mouse.set_visible(0)
-    
-            self.board_margin_left = 18
-            self.board_margin_top = 15
-    
-            self.block_width = 46
-            self.block_hight = 40
-    
-            self.chess_radius = 18
-    
-            self.shrinkx = SCREEN_WIDTH
-            self.shrinky = SCREEN_HIGHT
-    
-            tools.States.__init__(self)
 
-            self.won_game = False
+            # TODO
+            text = "Please input your name:"
+            self.waiting_text, self.waiting_rect = self.make_text(text, GREEN, 
+                (SCREEN_WIDTH // 2 , 
+                SCREEN_HIGHT // 2), 14)
 
-            self.screen_rect = self.scr.get_rect()
+            name = ""
+            font = pg.font.Font(None, 50)
+            for evt in pg.event.get():
+                if evt.type == pg.KEYDOWN:
+                    if evt.unicode.isalpha():
+                        name += evt.unicode
+                    elif evt.key == pg.K_BACKSPACE:
+                        name = name[:-1]
+                    elif evt.key == pg.K_RETURN:
+                        print "name:", name
+                        break
+                elif evt.type == pg.QUIT:
+                    return
+            self.scr.fill((0, 0, 0))
+            block = font.render(name, True, (255, 255, 255))
+            rect = block.get_rect()
+            rect.center = self.scr.get_rect().center
+            self.scr.blit(block, rect)
+            pg.display.flip()
 
-            self.overlay = pg.Surface((self.screen_rect.width, self.screen_rect.height))
-            self.overlay.fill(0)
-            self.overlay.set_alpha(0)
 
-            self.X = 0
-            self.Y = 0
- 
-            self.last_put_X = 16
-            self.last_put_Y = 16
-            self.last_put_color = self.black
+            text = "Waiting for cloud server ..."
+            self.waiting_text, self.waiting_rect = self.make_text(text, GREEN, 
+                (SCREEN_WIDTH // 2 , 
+                SCREEN_HIGHT // 2), 14)
 
-            self.init_client_conn()
-    
-            # Start a thread to read rom socket then add a event
-            self.T = threading.Thread(target=self.read)
+            self.scr.blit(self.waiting_text, self.waiting_rect)
+            pg.display.update()
+            
+            self.init_client_conn_cloud_api()
+
+            self.T = threading.Thread(target=self.read_from_cloud)
             self.T.start()
-    
+
             # 1 Regist
     
             # 2 Get id and role from server (clientId is 0 as the host)
@@ -111,45 +125,157 @@ if __name__ == '__main__':
                         self.clientRole = ev.data['clientRole']
                         break
                     else: event.post(ev)
+
+            print "self.clientId:", self.clientId
+            print "self.clientRole:", self.clientRole
+
+
+            self.clock = pg.time.Clock()
+    
+            # load background image
+            self.board = pg.image.load('resources/images/Board.png')
+
+            self.black = pg.image.load('resources/images/Black.png')
+            self.white = pg.image.load('resources/images/White.png')
+        
+            # start fullscreen mode
+            if touchscreen == True:
+                #self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT), pg.FULLSCREEN)
+                self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
+            else:
+                self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
+    
+            # turn off the mouse pointer
+            #if touchscreen == True:
+                ##pg.mouse.set_visible(0)
+                #pg.event.set_allowed(None)
+                #pg.event.set_allowed(pg.MOUSEBUTTONDOWN)
+                ##pg.event.set_allowed(pg.MOUSEBUTTONDOWN)
+                ##pg.event.set_allowed(pg.MOUSEBUTTONUP)
+    
+            if touchscreen == True:
+                self.board_margin_left = 15
+                self.board_margin_top = 15
+                self.chess_radius = 10
+            else:
+                self.board_margin_left = 20
+                self.board_margin_top = 20
+                self.chess_radius = 18
+    
+            self.block_width = ((SCREEN_WIDTH * 833 // 1000) - self.board_margin_left * 2) // ( CHESS_BOARD_BLOCK_COUNTS + 1 )
+            self.block_hight = self.block_width
+
+            self.shrinkx = SCREEN_WIDTH
+            self.shrinky = SCREEN_HIGHT
+    
+
+            self.black_image = pg.transform.smoothscale(self.black, (self.chess_radius * 2 , self.chess_radius * 2))
+            self.white_image = pg.transform.smoothscale(self.white, (self.chess_radius * 2 , self.chess_radius * 2))
+
+
+            tools.States.__init__(self)
+
+
+            self.won_game = False
+            self.screen_rect = self.scr.get_rect()
+            self.overlay = pg.Surface((self.screen_rect.width, self.screen_rect.height))
+            self.overlay.fill(0)
+            self.overlay.set_alpha(0)
+
+            self.X = 0
+            self.Y = 0
+ 
+            if touchscreen == True:
+                self.last_put_X = 8
+                self.last_put_Y = 8
+            else:
+                self.last_put_X = 16
+                self.last_put_Y = 16
+
+            self.last_put_color = self.black
+
     
             # 3 Show Board
+            #self.board_width = 833
+            #self.bg_width = 1000
+            #self.block_width = (self.shrinkx * (self.board_width / self.bg_width) - self.board_margin_left * 2) / 15 - 1
+            
             self.board_image = pg.transform.smoothscale(self.board, (self.shrinkx, self.shrinky))
             self.scr.blit(self.board_image, (0,0))
+            if touchscreen == True:
+                self.grid_width = 1
+            else:
+                self.grid_width = 2
+            self.draw_grid(CHESS_BOARD_BLOCK_COUNTS)
             pg.display.flip()
-    
+
 
             self.setup_btns()
             
+            self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
             # Guest1
-            pg.display.update(self.scr.blit(self.white,
-                (14*self.block_width+self.board_margin_left * 2 + 20, 
-                2*self.block_hight + self.board_margin_top)))
-
-            text = "Guest1"
-            self.guest_text, self.guest_rect = self.make_text(text, YELLOW, 
-                (14*self.block_width+self.board_margin_left * 2 + self.chess_radius * 2 + 20 + 20 + 5, 
-                2*self.block_hight + self.board_margin_top + self.chess_radius), 
-                20)
-
-            # You
-            pg.display.update(self.scr.blit(self.black,
-                (14*self.block_width+self.board_margin_left * 2 + 20, 
-                10*self.block_hight + self.board_margin_top)))
-
-            text = "You" 
-            self.host_text, self.host_rect = self.make_text(text, YELLOW, 
-                (14*self.block_width+self.board_margin_left * 2 + self.chess_radius * 2 + 20 + 20, 
-                10*self.block_hight + self.board_margin_top + self.chess_radius), 
-                20)
+            if touchscreen == True:
+                #TODO
+                # White chess
+                x1 = self.right_board_x + (self.board_margin_left//2)
+                pg.display.update(self.scr.blit(self.white_image,
+                    (x1, 
+                    1*self.block_hight + self.board_margin_top)))
     
+                text = "Guest1"
+                self.guest_text, self.guest_rect = self.make_text(text, YELLOW, 
+                    (x1 + (self.chess_radius * 2) + self.board_margin_left + 2 , 
+                    1*self.block_hight + self.board_margin_top + self.chess_radius - 1), 14)
+    
+                # Your chess
+                pg.display.update(self.scr.blit(self.black_image,
+                    (x1, 
+                    5*self.block_hight + self.board_margin_top)))
+    
+                text = "You" 
+                self.host_text, self.host_rect = self.make_text(text, YELLOW, 
+                    (x1 + (self.chess_radius * 2) + self.board_margin_left - 2, 
+                    5*self.block_hight + self.board_margin_top + self.chess_radius - 1), 14)
+
+                self.put_pawn(0,0, self.black_image)
+                self.put_pawn(1,1, self.white_image)   
+            else: 
+                pg.display.update(self.scr.blit(self.white,
+                    (CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2 + 20, 
+                    2*self.block_hight + self.board_margin_top)))
+    
+                text = "Guest1"
+                self.guest_text, self.guest_rect = self.make_text(text, YELLOW, 
+                    (CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2 + self.chess_radius * 2 + 20 + 20 + 5, 
+                    2*self.block_hight + self.board_margin_top + self.chess_radius), 
+                    20)
+    
+                # You
+                pg.display.update(self.scr.blit(self.black,
+                    (CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2 + 20, 
+                    10*self.block_hight + self.board_margin_top)))
+    
+                text = "You" 
+                self.host_text, self.host_rect = self.make_text(text, YELLOW, 
+                    (CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2 + self.chess_radius * 2 + 20 + 20, 
+                    10*self.block_hight + self.board_margin_top + self.chess_radius), 
+                    20)
+           
+                self.put_pawn(0,0, self.black)
+                self.put_pawn(1,1, self.white)   
+
             pg.display.update()
     
-            self.grid = [[0 for x in range(15)] for y in range(15)]
+            self.grid = [[0 for x in range(CHESS_BOARD_BLOCK_COUNTS + 1)] for y in range(CHESS_BOARD_BLOCK_COUNTS + 1)]
 
-            # Let server known after chess board shown done?
-            data = {'clientId':self.clientId, 'action':'show board', 'status':'done'}
-            try: self.conn.send(json.dumps(data))
-            except: print('pipe broken')
+            if touchscreen == True:
+                pass
+            else:
+                pass
+                # Let server known after chess board shown done?
+#                data = {'clientId':self.clientId, 'action':'show board', 'status':'done'}
+#                try: self.conn.send(json.dumps(data))
+#                except: print('pipe broken')
             
             ### Your turn: Put down the first chess at the center of the board
             self.your_turn = True 
@@ -164,18 +290,164 @@ if __name__ == '__main__':
             # Show Game results
             # self.done = False
     
-            # 5 Quit
-            ## Tell server to quit from socket
-            #try: self.conn.send('"quit"'.encode('UTF-8'))
-            #except: print('pipe broken')
+        def draw_grid(self, n):
+            for i in range(0, n + 1):
+                # Rows
+                x1 = self.board_margin_left
+                y1 = self.board_margin_top + i * self.block_width
+                x2 = self.board_margin_left + n * self.block_width
+                y2 = self.board_margin_top + i * self.block_width
+                pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+
+                # Columns
+                x1 = self.board_margin_left + i * self.block_width
+                y1 = self.board_margin_top
+                x2 = self.board_margin_left + i * self.block_width
+                y2 = self.board_margin_top + n * self.block_width
+                pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+
+        def patch_grid(self, n, x, y):
+            self.patch_grid_x0_xn(n, x, y)
+            self.patch_grid_y0_yn(n, x, y)
+            self.patch_grid_inner(n, x, y)
+
+        def patch_grid_x0_xn(self, n, x, y):
+            if x == 0:
+                x1 = self.board_margin_left
+                if y == 0:
+                    y1 = self.board_margin_top
+
+                    # Rows
+                    x2 = self.board_margin_left + self.chess_radius
+                    y2 = self.board_margin_top
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
     
-            #data = {'clientId':'0','action':'quit'}
-            #try: self.conn.send(json.dumps(data))
-            #except: print('pipe broken')
+                    # Columns
+                    x2 = self.board_margin_left
+                    y2 = self.board_margin_top + self.chess_radius
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                elif y == n:
+                    # Rows
+                    y1 = self.board_margin_top + (y * self.block_width)
+                    x2 = self.board_margin_left + self.chess_radius
+                    y2 = self.board_margin_top + (y * self.block_width)
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
     
-            #exit()
-        
-        def init_client_conn(self):
+                    # Columns
+                    y1 = self.board_margin_top + (y * self.block_width - self.chess_radius)
+                    x2 = self.board_margin_left
+                    y2 = self.board_margin_top + (y * self.block_width)
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+
+                else:
+                    # Rows
+                    y1 = self.board_margin_top + (y * self.block_width)
+                    x2 = self.board_margin_left + self.chess_radius
+                    y2 = self.board_margin_top + (y * self.block_width)
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+    
+                    # Columns
+                    y1 = self.board_margin_top + (y * self.block_width - self.chess_radius)
+                    x2 = self.board_margin_left
+                    y2 = self.board_margin_top + (y * self.block_width + self.chess_radius)
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+            elif x == n:
+                x1 = self.board_margin_left + (x * self.block_width)
+                if y == 0:
+
+                    # Rows
+                    x2 = self.board_margin_left + (x * self.block_width) - self.chess_radius
+                    y2 = self.board_margin_top
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+    
+                    # Columns
+                    x2 = self.board_margin_left + (x * self.block_width)
+                    y2 = self.board_margin_top + self.chess_radius
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                elif y == n:
+                    # Rows
+                    y1 = self.board_margin_top + (y * self.block_width)
+                    x2 = self.board_margin_left + (x * self.block_width) - self.chess_radius
+                    y2 = self.board_margin_top + (y * self.block_width)
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+    
+                    # Columns
+                    y1 = self.board_margin_top + (y * self.block_width - self.chess_radius)
+                    x2 = self.board_margin_left + (x * self.block_width)
+                    y2 = self.board_margin_top + (y * self.block_width)
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+
+                else:
+                    # Rows
+                    y1 = self.board_margin_top + (y * self.block_width)
+                    x2 = self.board_margin_left + (x * self.block_width) - self.chess_radius
+                    y2 = self.board_margin_top + (y * self.block_width)
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+    
+                    # Columns
+                    y1 = self.board_margin_top + (y * self.block_width - self.chess_radius)
+                    x2 = self.board_margin_left + (x * self.block_width)
+                    y2 = self.board_margin_top + (y * self.block_width + self.chess_radius)
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+
+        def patch_grid_y0_yn(self, n, x, y):
+            if y == 0:
+                if not x == 0 and not x == n:
+                    y1 = self.board_margin_top
+                    x1 = self.board_margin_left + (x * self.block_width) - self.chess_radius
+    
+                    # Rows
+                    x2 = self.board_margin_left + (x * self.block_width) + self.chess_radius
+                    y2 = self.board_margin_top
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+       
+                    # Columns
+                    x1 = self.board_margin_left + (x * self.block_width)
+                    x2 = self.board_margin_left + (x * self.block_width)
+                    y2 = self.board_margin_top + self.chess_radius
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+            elif y == n:
+                if not x == 0 and not x == n:
+                    y1 = self.board_margin_top + (y * self.block_width)
+                    x1 = self.board_margin_left + (x * self.block_width) - self.chess_radius
+    
+                    # Rows
+                    x2 = self.board_margin_left + (x * self.block_width) + self.chess_radius
+                    y2 = y1
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+       
+                    # Columns
+                    x1 = self.board_margin_left + (x * self.block_width)
+                    x2 = x1
+                    y2 = y1 - self.chess_radius
+                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+
+        def patch_grid_inner(self, n, x, y):
+            if x > 0 and x < n and y > 0 and y < n:
+                # Rows
+                x1 = self.board_margin_left + (x * self.block_width) - self.chess_radius
+                y1 = self.board_margin_top + (y * self.block_width)
+                
+                x2 = self.board_margin_left + (x * self.block_width) + self.chess_radius
+                y2 = y1
+    
+                pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                
+                # Columns
+                x1 = self.board_margin_left + (x * self.block_width)
+                x2 = x1
+                
+                y1 = self.board_margin_top + (y * self.block_width) - self.chess_radius
+                y2 = self.board_margin_top + (y * self.block_width) + self.chess_radius
+                pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+
+        def init_client_conn_cloud_api(self):
+            self.data_name = "vlv_benchmark"
+            self.node = Node(mashery_cloud_config)
+            self.data_id = self.node.dataId(self.data_name)
+            print "self.data_id:", self.data_id
+
+        def init_client_conn_socket(self):
             self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.soc.settimeout(5.0)
@@ -205,89 +477,95 @@ if __name__ == '__main__':
             self.soc.settimeout(None)
     
         def set_last_chess_prompt(self, x, y):
-            # left top
-            # -
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)))
-
-            # |
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)))
-
-            # right down
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
-                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8,2,8)))
-
-            # -
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
-                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)))
-            # ----------------------------------------------------
-            # left down 
-            # -
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2, 8,2)))
-            # |
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8, 2,8)))
-
-            # right top
-            # -
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
-                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)))
-            # |
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
-                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)))
-
-            if self.last_put_X < 15 and self.last_put_Y < 15:
+            if touchscreen == True:
+                pass
+            else:
+                pass
                 # left top
-                r1 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                        self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)
-                self.scr.blit(self.board_image,r1,r1)
-
-                r2 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                        self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)
-                self.scr.blit(self.board_image,r2,r2)
-
-                # right top
-                r3 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
-                        self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8,2,8)
-                self.scr.blit(self.board_image,r3,r3)
-
-                r4 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
-                        self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)
-                self.scr.blit(self.board_image,r4,r4)
-
-                # ----------------------------------------------           
-                # left down
-                r5 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                        self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)
-                self.scr.blit(self.board_image,r5,r5)
-
-                r6 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                        self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8 ,2,8)
-                self.scr.blit(self.board_image,r6,r6)
-
+                # -
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                    y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)))
+    
+                # |
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                    y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)))
+    
                 # right down
-                r7 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
-                        self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1 ,8,2)
-                self.scr.blit(self.board_image,r7,r7)
-
-                r8 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
-                        self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1 ,2,8)
-                self.scr.blit(self.board_image,r8,r8)
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
+                    y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8,2,8)))
+    
+                # -
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
+                    y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)))
+                # ----------------------------------------------------
+                # left down 
+                # -
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                    y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2, 8,2)))
+                # |
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                    y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8, 2,8)))
+    
+                # right top
+                # -
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
+                    y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)))
+                # |
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
+                    y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)))
+    
+                if self.last_put_X < CHESS_BOARD_BLOCK_COUNTS + 1 and self.last_put_Y < CHESS_BOARD_BLOCK_COUNTS + 1:
+                    # left top
+                    r1 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                            self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)
+                    self.scr.blit(self.board_image,r1,r1)
+    
+                    r2 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                            self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)
+                    self.scr.blit(self.board_image,r2,r2)
+    
+                    # right top
+                    r3 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
+                            self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8,2,8)
+                    self.scr.blit(self.board_image,r3,r3)
+    
+                    r4 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
+                            self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)
+                    self.scr.blit(self.board_image,r4,r4)
+    
+                    # ----------------------------------------------           
+                    # left down
+                    r5 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                            self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)
+                    self.scr.blit(self.board_image,r5,r5)
+    
+                    r6 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                            self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8 ,2,8)
+                    self.scr.blit(self.board_image,r6,r6)
+    
+                    # right down
+                    r7 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
+                            self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1 ,8,2)
+                    self.scr.blit(self.board_image,r7,r7)
+    
+                    r8 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
+                            self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1 ,2,8)
+                    self.scr.blit(self.board_image,r8,r8)
                  
         def put_pawn(self,x,y,color):
             print ("### put chess (x: %s, y: %s)" % (x,y))
+            print ("### x pos : %s" % str(x*self.block_width + self.board_margin_left))
+            print ("### x pos : %s" % str(x*self.block_width + self.board_margin_left - self.chess_radius))
             pg.display.update(self.scr.blit(color,
-                (x*self.block_width+self.board_margin_left - self.chess_radius, 
+                (x*self.block_width + self.board_margin_left - self.chess_radius, 
                 y*self.block_hight + self.board_margin_top - self.chess_radius)))
 
             self.set_last_chess_prompt(x,y)
@@ -314,17 +592,42 @@ if __name__ == '__main__':
 #                'border_color'       : (0,0,0),
 #            }
     
-            self.btn1 = button.Button((self.board_margin_left * 2 + self.block_width * 14 + 10, 500, 100,35), (0,0,100), 
-                self.quit_click, text='QUIT', 
-                clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
-
-            self.btn2 = button.Button((self.board_margin_left * 2 + self.block_width * 14 + 10, 10, 100,35), (0,0,100), 
-                self.test_click, text='TEST', 
-                clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
+            if touchscreen == True:
+                self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
+                self.btn1 = button.Button((self.right_board_x + 5, 190, 70,30), (0,0,100), 
+                    self.quit_click, text='QUIT', 
+                    clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
     
-            self.buttons = [self.btn1, self.btn2]
+#                self.btn2 = button.Button((self.board_margin_left * 2 + self.block_width * 14 + 10, 200, 50,35), (0,0,100), 
+#                    self.test_click, text='TEST', 
+#                    clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
+            else:
+                self.btn1 = button.Button((self.board_margin_left * 2 + self.block_width * CHESS_BOARD_BLOCK_COUNTS + 10, 500, 100,35), (0,0,100), 
+                    self.quit_click, text='QUIT', 
+                    clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
+    
+                self.btn2 = button.Button((self.board_margin_left * 2 + self.block_width * CHESS_BOARD_BLOCK_COUNTS + 10, 10, 100,35), (0,0,100), 
+                    self.test_click, text='TEST', 
+                    clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
+    
+            if touchscreen == True:
+                self.buttons = [self.btn1]
+            else:
+                self.buttons = [self.btn1, self.btn2]
 
-        def read(self):
+        def read_from_cloud(self):
+            while not self.done:
+                try: data = json.loads(self.node.getData(self.data_id))
+                except:
+                    print("Fail to get data %s" % self.data_name)
+                    #break
+                try: pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':data}))
+                except:
+                    print("Fail to post event ")
+                    break
+            print "## read_from_cloud thread exit"
+
+        def read_from_socket(self):
             #self.soc.setblocking(0)
             while not self.done:
                 try: data = json.loads(self.conn.recv(1024))
@@ -340,6 +643,9 @@ if __name__ == '__main__':
             
         def quit_click(self):
             self.done = True
+            #if touchscreen == True:
+            #    self.clean()
+            
 
         def show_how_won(self, (x1, y1), (x2, y2)):
             x1_pos = x1*self.block_width + self.board_margin_left
@@ -360,6 +666,8 @@ if __name__ == '__main__':
         def easefocus(self,x,y):
             r = pg.Rect(x*self.block_width + self.board_margin_left - self.chess_radius, y*self.block_hight + self.board_margin_top - self.chess_radius,self.chess_radius * 2,self.chess_radius * 2)
             self.scr.blit(self.board_image,r,r)
+            self.patch_grid(CHESS_BOARD_BLOCK_COUNTS, x, y)
+            # Rows
             return r
 
         def events(self):
@@ -383,7 +691,10 @@ if __name__ == '__main__':
 
                     elif ev.data['action'] == "update chess":
                         x,y = ev.data['pos']
-                        self.put_pawn(x,y, self.white)
+                        if touchscreen == True:
+                            self.put_pawn(x,y, self.white_image)
+                        else:
+                            self.put_pawn(x,y, self.white)
                         #self.put_pawn(x,y, 'white')
                         self.grid[x][y] = 2 # 2: white
                         self.your_turn = True
@@ -392,33 +703,48 @@ if __name__ == '__main__':
                         print ('Unhandled other USER event %s' % str(ev.data))
     
                 elif self.your_turn == True and ev.type == pg.MOUSEBUTTONUP and ev.button == 1:
+                #elif self.your_turn == True and ev.type == pg.MOUSEBUTTONDOWN and ev.button == 1:
+                #elif self.your_turn == True and ev.type == pg.MOUSEBUTTONDOWN:
+                #elif ev.type == pg.MOUSEBUTTONDOWN:
+                     #print "#### MOUSEBUTTONDOWN ####"
                      x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
-                     if x < 15 and y < 15:
+                     if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1:
                          if self.grid[x][y] == 0:
-                             self.put_pawn(x,y, self.black)
-                             self.grid[x][y] = 1 # 1: black
-                             print "### 1 ### grid[x][y]", str(self.grid[x][y])
-                             data = {'clientId':self.clientId, 'action':'put chess', 'pos':[x, y]}
-                             try: self.conn.send(json.dumps(data))
-                             except: print('pipe broken')
-                             self.your_turn = False
+                             if touchscreen == True:
+                                 self.put_pawn(x,y, self.black_image)
+                             else:
+                                 self.put_pawn(x,y, self.black)
+                             # TODO     
+## Server
+
+#                                 self.grid[x][y] = 1 # 1: black
+#                                 print "### 1 ### grid[x][y]", str(self.grid[x][y])
+#                                 data = {'clientId':self.clientId, 'action':'put chess', 'pos':[x, y]}
+#                                 try: self.conn.send(json.dumps(data))
+#                                 except: print('pipe broken')
+#                                 self.your_turn = False
+
+### Server
                 #elif self.your_turn == True and ev.type == pg.MOUSEMOTION:
                 elif ev.type == pg.MOUSEMOTION:
-                     x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
-                     if x < 15 and y < 15 and not self.won_game:
-                         if self.grid[self.X][self.Y] == 0:
-                             r = self.easefocus(self.X,self.Y)
-                         if self.grid[x][y] == 0:
-                             pg.display.update(self.scr.blit(self.black, 
-                                 (x*self.block_width+self.board_margin_left - self.chess_radius, 
-                                 y*self.block_hight + self.board_margin_top - self.chess_radius)))
+                     if touchscreen == False:
+                         x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
+                         if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1 and not self.won_game:
+                             if self.grid[self.X][self.Y] == 0:
+                                 r = self.easefocus(self.X,self.Y)
+                             if self.grid[x][y] == 0:
+                                 pg.display.update(self.scr.blit(self.black, 
+                                     (x*self.block_width+self.board_margin_left - self.chess_radius, 
+                                     y*self.block_hight + self.board_margin_top - self.chess_radius)))
+    
+                                 self.X = x
+                                 self.Y = y
 
-                             self.X = x
-                             self.Y = y
+                else:
+                    print "#### ev.type:", str(ev.type)
 
         #def won_game(self):
         #    return True
-
      
         def update_label(self):
     
@@ -447,6 +773,7 @@ if __name__ == '__main__':
     
         def render(self):
             #self.screen.fill((255,255,255))
+
             for button in self.buttons:
                 button.render(self.scr)
 
@@ -479,7 +806,11 @@ if __name__ == '__main__':
 
         def clean(self):
             print "### 1"
-            self.conn.close()
+            #if touchscreen == True:
+            #    pass
+            #else:
+                #pass
+                #self.conn.close()
             print "### 2"
             self.T.join(1)
             print "### 3"

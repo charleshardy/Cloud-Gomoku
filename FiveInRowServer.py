@@ -5,19 +5,30 @@ camp 2015 in WindRiver.com"""
 
 from pygame import *
 time.Clock()
-import socket
+
 import threading
 import json
+
+from node import Node
+from config import mashery_cloud_config
 
     
 class Game(list,object):
     
     def __init__(self):
 
-        init()
-
         # Waiting for connection
-        self.init_server_conn()
+        #self.init_server_conn()
+        data_name = "vlv_benchmark"
+        node = Node(mashery_cloud_config)
+        data_id = node.dataId(data_name)
+
+        # Set data
+        data = {'action':'assigned', 'clientRole':'host', 'clientId':'0'}
+        try: node.setData(data_id, json.dumps(data))
+        except: print("Fail to set data %s = %s" % (data_name, data))
+
+        return
 
         T = threading.Thread(target=self.read)
         T.start()
@@ -127,22 +138,9 @@ class Game(list,object):
         self.conn.close()
     
     def init_server_conn(self):
-        soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        soc.settimeout(5.0)
-
-        soc.bind(('',50007))
-        soc.listen(1)
-        ### attend un client temps que l'on ne quitte pas
-        while True:
-            try:
-                print('awaiting for player connection')
-                self.conn = soc.accept()[0]
-                break
-            except:
-                for ev in event.get():
-                    if ev.type == QUIT: exit()
-        soc.settimeout(None)
+        data_name = "vlv_benchmark"
+        node = Node(mashery_cloud_config)
+        data_id = node.dataId(data_name)
 
     def ai_action(self):
         if self.chess_count > 0 and self.client1_turn == True:
