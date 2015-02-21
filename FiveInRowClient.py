@@ -42,17 +42,39 @@ GRID_LINE     = (105,  50,   6)
 #CHESS_BOARD_BLOCK_COUNTS = 8
 CHESS_BOARD_BLOCK_COUNTS = 10
 
-#touchscreen = False
-touchscreen = True
+#TOUCH_SCREEN = False
+TOUCH_SCREEN = True
 
 if __name__ == '__main__':
 
-    if touchscreen == True:
-        SCREEN_WIDTH = 320
-        SCREEN_HIGHT = 240
-    else:
-        SCREEN_WIDTH = 800
-        SCREEN_HIGHT = 600
+    config = {'CHESS BOARD BLOCK COUNTS': 10, 'SCREEN WIDTH': 320, 'SCREEN HIGHT': 240, 
+        'USER NAME': 'You', 'FIRST START': True, 'TOUCH SCREEN': True}
+
+    #with open('config.json', 'w') as f:
+    #    json.dump(config, f)
+
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+
+    CHESS_BOARD_BLOCK_COUNTS = config['CHESS BOARD BLOCK COUNTS']
+    SCREEN_WIDTH = config['SCREEN WIDTH']
+    SCREEN_HIGHT = config['SCREEN HIGHT']
+    TOUCH_SCREEN = config['TOUCH SCREEN']
+    USER_NAME = config['USER NAME']
+    FIRST_START = config['FIRST START']
+
+    ##write it back to the file
+    #with open('config.json', 'w') as f:
+    #    json.dump(config, f)
+    
+    #exit()
+
+    #if TOUCH_SCREEN == True:
+    #    SCREEN_WIDTH = 320
+    #    SCREEN_HIGHT = 240
+    #else:
+    #    SCREEN_WIDTH = 800
+    #    SCREEN_HIGHT = 600
 
     class Game(tools.States):
         def __init__(self):
@@ -63,7 +85,7 @@ if __name__ == '__main__':
 
             self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
 
-            # TODO
+            # TODO: input box
             text = "Please input your name:"
             self.waiting_text, self.waiting_rect = self.make_text(text, GREEN, 
                 (SCREEN_WIDTH // 2 , 
@@ -139,21 +161,21 @@ if __name__ == '__main__':
             self.white = pg.image.load('resources/images/White.png')
         
             # start fullscreen mode
-            if touchscreen == True:
+            if TOUCH_SCREEN == True:
                 #self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT), pg.FULLSCREEN)
                 self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
             else:
                 self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
     
             # turn off the mouse pointer
-            #if touchscreen == True:
+            #if TOUCH_SCREEN == True:
                 ##pg.mouse.set_visible(0)
                 #pg.event.set_allowed(None)
                 #pg.event.set_allowed(pg.MOUSEBUTTONDOWN)
                 ##pg.event.set_allowed(pg.MOUSEBUTTONDOWN)
                 ##pg.event.set_allowed(pg.MOUSEBUTTONUP)
     
-            if touchscreen == True:
+            if TOUCH_SCREEN == True:
                 self.board_margin_left = 15
                 self.board_margin_top = 15
                 self.chess_radius = 10
@@ -185,7 +207,7 @@ if __name__ == '__main__':
             self.X = 0
             self.Y = 0
  
-            if touchscreen == True:
+            if TOUCH_SCREEN == True:
                 self.last_put_X = 8
                 self.last_put_Y = 8
             else:
@@ -202,7 +224,7 @@ if __name__ == '__main__':
             
             self.board_image = pg.transform.smoothscale(self.board, (self.shrinkx, self.shrinky))
             self.scr.blit(self.board_image, (0,0))
-            if touchscreen == True:
+            if TOUCH_SCREEN == True:
                 self.grid_width = 1
             else:
                 self.grid_width = 2
@@ -214,7 +236,7 @@ if __name__ == '__main__':
             
             self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
             # Guest1
-            if touchscreen == True:
+            if TOUCH_SCREEN == True:
                 #TODO
                 # White chess
                 x1 = self.right_board_x + (self.board_margin_left//2)
@@ -232,7 +254,7 @@ if __name__ == '__main__':
                     (x1, 
                     5*self.block_hight + self.board_margin_top)))
     
-                text = "You" 
+                text = USER_NAME
                 self.host_text, self.host_rect = self.make_text(text, YELLOW, 
                     (x1 + (self.chess_radius * 2) + self.board_margin_left - 2, 
                     5*self.block_hight + self.board_margin_top + self.chess_radius - 1), 14)
@@ -268,7 +290,7 @@ if __name__ == '__main__':
     
             self.grid = [[0 for x in range(CHESS_BOARD_BLOCK_COUNTS + 1)] for y in range(CHESS_BOARD_BLOCK_COUNTS + 1)]
 
-            if touchscreen == True:
+            if TOUCH_SCREEN == True:
                 pass
             else:
                 pass
@@ -477,7 +499,7 @@ if __name__ == '__main__':
             self.soc.settimeout(None)
     
         def set_last_chess_prompt(self, x, y):
-            if touchscreen == True:
+            if TOUCH_SCREEN == True:
                 pass
             else:
                 pass
@@ -592,7 +614,7 @@ if __name__ == '__main__':
 #                'border_color'       : (0,0,0),
 #            }
     
-            if touchscreen == True:
+            if TOUCH_SCREEN == True:
                 self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
                 self.btn1 = button.Button((self.right_board_x + 5, 190, 70,30), (0,0,100), 
                     self.quit_click, text='QUIT', 
@@ -610,7 +632,7 @@ if __name__ == '__main__':
                     self.test_click, text='TEST', 
                     clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
     
-            if touchscreen == True:
+            if TOUCH_SCREEN == True:
                 self.buttons = [self.btn1]
             else:
                 self.buttons = [self.btn1, self.btn2]
@@ -643,7 +665,7 @@ if __name__ == '__main__':
             
         def quit_click(self):
             self.done = True
-            #if touchscreen == True:
+            #if TOUCH_SCREEN == True:
             #    self.clean()
             
 
@@ -691,7 +713,7 @@ if __name__ == '__main__':
 
                     elif ev.data['action'] == "update chess":
                         x,y = ev.data['pos']
-                        if touchscreen == True:
+                        if TOUCH_SCREEN == True:
                             self.put_pawn(x,y, self.white_image)
                         else:
                             self.put_pawn(x,y, self.white)
@@ -710,7 +732,7 @@ if __name__ == '__main__':
                      x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
                      if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1:
                          if self.grid[x][y] == 0:
-                             if touchscreen == True:
+                             if TOUCH_SCREEN == True:
                                  self.put_pawn(x,y, self.black_image)
                              else:
                                  self.put_pawn(x,y, self.black)
@@ -727,7 +749,7 @@ if __name__ == '__main__':
 ### Server
                 #elif self.your_turn == True and ev.type == pg.MOUSEMOTION:
                 elif ev.type == pg.MOUSEMOTION:
-                     if touchscreen == False:
+                     if TOUCH_SCREEN == False:
                          x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
                          if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1 and not self.won_game:
                              if self.grid[self.X][self.Y] == 0:
@@ -806,7 +828,7 @@ if __name__ == '__main__':
 
         def clean(self):
             print "### 1"
-            #if touchscreen == True:
+            #if TOUCH_SCREEN == True:
             #    pass
             #else:
                 #pass
