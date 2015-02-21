@@ -10,9 +10,10 @@ import threading
 import json
 
 from node import Node
-from config import mashery_cloud_config
+from config import cloud_configs
 
-    
+HESS_BOARD_BLOCK_COUNTS = 10
+
 class Game(list,object):
     
     def __init__(self):
@@ -20,7 +21,8 @@ class Game(list,object):
         # Waiting for connection
         #self.init_server_conn()
         data_name = "vlv_benchmark"
-        node = Node(mashery_cloud_config)
+	cloud_name = "Mashery"
+        node = Node(cloud_name, cloud_configs[cloud_name])
         data_id = node.dataId(data_name)
 
         # Set data
@@ -28,7 +30,7 @@ class Game(list,object):
         try: node.setData(data_id, json.dumps(data))
         except: print("Fail to set data %s = %s" % (data_name, data))
 
-        return
+#        return
 
         T = threading.Thread(target=self.read)
         T.start()
@@ -44,8 +46,8 @@ class Game(list,object):
         try: self.conn.send(json.dumps(data))
         except: print('pipe broken')
 
-        #del(self[:])
-        #self.extend([['_']*15 for foo in range(15)])
+        del(self[:])
+        self.extend([['_']*HESS_BOARD_BLOCK_COUNTS for foo in range(HESS_BOARD_BLOCK_COUNTS)])
 
         # turn from 120 decreasing
         #self.turn = 120
@@ -195,22 +197,46 @@ class Game(list,object):
 #            self.cli2_turn = True
             
     def is_winner(self):
-        # ToDo
-        return False
-    
+        pawn = self.turn&1
+        X,Y = self.actual_pos
+        invpawn = str(pawn^1)
+        pawn = str(pawn)
+        row1 = [((X,y),self[X][y])for y in range(CHESS_BOARD_BLOCK_COUNTS)]#+[('',invpawn)]
+        print "----------row1="+str(row1)
+        row2 = [((x,Y),self[x][Y])for x in range(CHESS_BOARD_BLOCK_COUNTS)]#+[('',invpawn)]
+        print "----------row2="+str(row2)
+        foo = X-Y
+        row3 = [((x,x-foo),self[x][x-foo])for x in range(CHESS_BOARD_BLOCK_COUNTS)if x-foo<CHESS_BOARD_BLOCK_COUNTS]#+[('',invpawn)]
+        foo = X+Y
+        row4 = [((x,foo-x),self[x][foo-x])for x in range(CHESS_BOARD_BLOCK_COUNTS)if foo-x<CHESS_BOARD_BLOCK_COUNTS]#+[('',invpawn)]
+        print "----------row3="+str(row3)
+        print "----------row4="+str(row4)
+        for row in (row1,row2,row3,row4):
+            coords,pawns = zip(*row)
+            pawns = ''.join(pawns)
+            print "-------coords="+str(coords)
+            print "-------pawns="+str(pawns)
+            index1 = pawns.find(pawn*5)
+            if index1 == -1: continue
+            #index2 = pawns[index1:].find(pawn+invpawn)
+            #index2bis = pawns[index1:].find(pawn+'_')
+            #if -1 < index2 and -1 < index2bis: index2 = min(index2,index2bis)
+            #else: index2 = max(index2,index2bis)
+            #if index2 == -1: continue
+            print "-----index1="+str(index1)
+            #print "-----index2="+str(index2)
+            self.winnerspawns.extend(coords[index1:index1+5])
+        print "-------self.winnerspawns="+str(self.winnerspawns)
+        return self.winnerspawns
+
     def read(self):
         while True:
-            #try: data = eval(self.conn.recv(20))
-            try: data = json.loads(self.conn.recv(1024))
+            try: data = json.loads(self.node.getData(self.data_id))
             except:
-                print('pipe broken')
-                data = 'quit'
-            if data == 'quit':
-                self.game_over = True
-                break
+		print("Fail to get data %s" % self.data_name)
             event.post(event.Event(USEREVENT+1,{'data':data}))
             print('# Recieve data : ', data)
-        
+       
 
 Game()
 quit()
