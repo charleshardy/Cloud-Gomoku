@@ -231,7 +231,7 @@ if __name__ == "__main__":
             if TOUCH_SCREEN == True:
                 #TODO
                 # White chess
-                x1 = self.right_board_x + (self.board_margin_left//2)
+                x1 = self.right_board_x + (self.board_margin_left)
                 pg.display.update(self.scr.blit(self.white_image,
                     (x1, 
                     1*self.block_hight + self.board_margin_top)))
