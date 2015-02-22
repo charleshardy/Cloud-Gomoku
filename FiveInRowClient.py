@@ -207,7 +207,7 @@ if __name__ == "__main__":
 #                except: print('pipe broken')
             
             ### Your turn: Put down the first chess at the center of the board
-            if CLIENT_ROLE == 1:
+            if CLIENT_ROLE == 0:
                 self.your_turn = True 
             else:
                 self.your_turn = False
