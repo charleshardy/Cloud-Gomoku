@@ -681,21 +681,19 @@ if __name__ == "__main__":
 
             data_name = "GMOVE_" + str(self.game_id)
             data_id = self.node.dataId(data_name)
-            X = None
-            Y = None
+            old_data = ''
             while not self.done:
                 try: 
                     data = json.loads(self.node.getData(data_id))
                     print ("data: %s" % str(data))
                     #if self.your_turn == True:
-                    if not data['Status'] == 0 and data['Status']:
-                        if data['PosX'] != X and data['PosY'] != Y:
-                            X = data['PosX']
-                            Y = data['PosY']
-                            try: pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':data}))
-                            except:
-                                print("Fail to post event ")
-                                break
+                    if not data['Status'] == 0 and data['Status'] and data != old_data:
+                        old_data = data
+                    #    print("----------X=%d, Y=%d, posx=%d, posy=%d" % (X, Y, data['PosX'], data['PosY']))
+                        try: pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':data}))
+                        except:
+                            print("Fail to post event ")
+                            break
                 except:
                     print("Fail to get data %s" % data_name)
                     #break
