@@ -6,7 +6,6 @@ camp 2015 in WindRiver.com"""
 import os
 import sys, getopt
 import pygame as pg
-#import socket
 import threading
 import json
 from toolbox import button
@@ -236,22 +235,23 @@ if __name__ == "__main__":
                     (x1, 
                     1*self.block_hight + self.board_margin_top)))
     
-                x1 = self.right_board_x + self.board_margin_left
+                x1 = self.right_board_x + (SCREEN_WIDTH - self.right_board_x)/2
                 text = self.player2_name
-                print "### text", text
                 self.guest_text, self.guest_rect = self.make_text(text, YELLOW, 
                     (x1,
-                    1*self.block_hight + self.board_margin_top), 14)
+                    1*self.block_hight + self.board_margin_top - self.chess_radius), 12)
     
                 # Your chess
+                x1 = self.right_board_x + (SCREEN_WIDTH - self.right_board_x)/2 - self.chess_radius
                 pg.display.update(self.scr.blit(self.black_image,
                     (x1, 
                     5*self.block_hight + self.board_margin_top)))
     
                 text = USER_NAME
+                x1 = self.right_board_x + (SCREEN_WIDTH - self.right_board_x)/2
                 self.host_text, self.host_rect = self.make_text(text, YELLOW, 
-                    (x1 + (self.chess_radius * 2) + self.board_margin_left - 2, 
-                    5*self.block_hight + self.board_margin_top + self.chess_radius - 1), 14)
+                    (x1,
+                    5*self.block_hight + self.board_margin_top - self.chess_radius), 12)
 
             else: 
                 pg.display.update(self.scr.blit(self.white,
@@ -670,11 +670,13 @@ if __name__ == "__main__":
                 "Name": "Player2",
             }
             json.dumps(game_meta_id_table)
+            return "Player2"
 
             for player_name in game_meta_id_table['Name']:
                 if not player_name == USER_NAME:
                     player2_name = player_name
                     return player2_name
+         
 
             return None
 
