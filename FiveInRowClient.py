@@ -231,15 +231,17 @@ if __name__ == "__main__":
             if TOUCH_SCREEN == True:
                 #TODO
                 # White chess
-                x1 = self.right_board_x + (self.board_margin_left)
+                x1 = self.right_board_x + (SCREEN_WIDTH - self.right_board_x)/2 - self.chess_radius
                 pg.display.update(self.scr.blit(self.white_image,
                     (x1, 
                     1*self.block_hight + self.board_margin_top)))
     
+                x1 = self.right_board_x + self.board_margin_left
                 text = self.player2_name
+                print "### text", text
                 self.guest_text, self.guest_rect = self.make_text(text, YELLOW, 
-                    (x1 + (self.chess_radius * 2) + self.board_margin_left + 2, 
-                    1*self.block_hight + self.board_margin_top + self.chess_radius - 1), 14)
+                    (x1,
+                    1*self.block_hight + self.board_margin_top), 14)
     
                 # Your chess
                 pg.display.update(self.scr.blit(self.black_image,
