@@ -754,6 +754,7 @@ if __name__ == "__main__":
                      else: #peer draw
                          X = ev.data['PosX']
                          Y = ev.data['PosY']
+                         self.seq_id = ev.data['SeqID']
                          self.put_pawn(X, Y, self.black_image if self.turn else self.white_image)
                          self.your_turn = True                    
 #                    #if ev.data['action'] == 'assigned':
