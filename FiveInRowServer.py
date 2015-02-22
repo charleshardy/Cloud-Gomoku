@@ -12,7 +12,7 @@ import json
 from node import Node
 from config import cloud_configs
 
-CHESS_BOARD_BLOCK_COUNTS = 10
+CHESS_BOARD_BLOCK_COUNTS = 11
 DRAW = 0
 CONTINUE = 1
 WIN = 2
@@ -71,6 +71,8 @@ class Game(threading.Thread):
                 except:
                     print("Fail to set data %s" % self.data_name)
                     return
+                else:
+                    print("set to data X=%d, Y=%d, status=%d" % (X, Y, result))
 
 		if result == WIN:
 	            game_not_over = False
@@ -79,20 +81,20 @@ class Game(threading.Thread):
         X,Y = self.actual_pos
         pawn = self.current_pawn
         row1 = [((X,y),self.pos[X][y])for y in range(CHESS_BOARD_BLOCK_COUNTS)]#+[('',invpawn)]
-        print "----------row1="+str(row1)
+        #print "----------row1="+str(row1)
         row2 = [((x,Y),self.pos[x][Y])for x in range(CHESS_BOARD_BLOCK_COUNTS)]#+[('',invpawn)]
-        print "----------row2="+str(row2)
+        #print "----------row2="+str(row2)
         foo = X-Y
         row3 = [((x,x-foo),self.pos[x][x-foo])for x in range(CHESS_BOARD_BLOCK_COUNTS)if x-foo<CHESS_BOARD_BLOCK_COUNTS]#+[('',invpawn)]
         foo = X+Y
         row4 = [((x,foo-x),self.pos[x][foo-x])for x in range(CHESS_BOARD_BLOCK_COUNTS)if foo-x<CHESS_BOARD_BLOCK_COUNTS]#+[('',invpawn)]
-        print "----------row3="+str(row3)
-        print "----------row4="+str(row4)
+        #print "----------row3="+str(row3)
+        #print "----------row4="+str(row4)
         for row in (row1,row2,row3,row4):
             coords,pawns = zip(*row)
             pawns = ''.join(str(pawns))
-            print "-------coords="+str(coords)
-            print "-------pawns="+str(pawns)
+         #   print "-------coords="+str(coords)
+          #  print "-------pawns="+str(pawns)
             index1 = pawns.find(str(pawn)*5)
             if index1 == -1: continue
             #index2 = pawns[index1:].find(pawn+invpawn)
@@ -100,10 +102,10 @@ class Game(threading.Thread):
             #if -1 < index2 and -1 < index2bis: index2 = min(index2,index2bis)
             #else: index2 = max(index2,index2bis)
             #if index2 == -1: continue
-            print "-----index1="+str(index1)
+           # print "-----index1="+str(index1)
             #print "-----index2="+str(index2)
             self.winnerspawns.extend(coords[index1:index1+5])
-        print "-------self.winnerspawns="+str(self.winnerspawns)
+       # print "-------self.winnerspawns="+str(self.winnerspawns)
 	if self.winnerspawns:
             return WIN
 	else:
