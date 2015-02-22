@@ -745,7 +745,7 @@ if __name__ == "__main__":
                      if CLIENT_ROLE == self.pawn:
                          if result == WIN:
                              self.won_game = True
-                         elif result == CONTINE:
+                         elif result == CONTINUE:
                              pass    
                          else:
                           # generated error
