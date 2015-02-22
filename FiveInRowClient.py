@@ -628,23 +628,25 @@ if __name__ == "__main__":
 #                'border_color'       : (0,0,0),
 #            }
     
-            if TOUCH_SCREEN == True:
-                self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
-                self.btn1 = button.Button((self.right_board_x + 5, 190, 70,30), (0,0,100), 
-                    self.quit_click, text='QUIT', 
-                    clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
+            self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
+            button_hight = self.board_margin_top * 2
+            button_width = SCREEN_WIDTH - self.right_board_x - self.board_margin_left * 2
+            self.btn1 = button.Button((self.right_board_x + self.board_margin_left, 
+                                          SCREEN_HIGHT - self.board_margin_left - button_hight, 
+                                          button_width,button_hight), (0,0,100), 
+            self.quit_click, text='QUIT', 
+            clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
     
 #                self.btn2 = button.Button((self.board_margin_left * 2 + self.block_width * 14 + 10, 200, 50,35), (0,0,100), 
 #                    self.test_click, text='TEST', 
 #                    clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
-            else:
-                self.btn1 = button.Button((self.board_margin_left * 2 + self.block_width * CHESS_BOARD_BLOCK_COUNTS + 10, 500, 100,35), (0,0,100), 
-                    self.quit_click, text='QUIT', 
-                    clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
+                #self.btn1 = button.Button((self.board_margin_left * 2 + self.block_width * CHESS_BOARD_BLOCK_COUNTS + 10, 500, 100,35), (0,0,100), 
+                #    self.quit_click, text='QUIT', 
+                #    clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
     
-                self.btn2 = button.Button((self.board_margin_left * 2 + self.block_width * CHESS_BOARD_BLOCK_COUNTS + 10, 10, 100,35), (0,0,100), 
-                    self.test_click, text='TEST', 
-                    clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
+            #    self.btn2 = button.Button((self.board_margin_left * 2 + self.block_width * CHESS_BOARD_BLOCK_COUNTS + 10, 10, 100,35), (0,0,100), 
+            #        self.test_click, text='TEST', 
+            #        clicked_color=(255,255,255), hover_color=(0,0,130), **button_config)
     
             if TOUCH_SCREEN == True:
                 self.buttons = [self.btn1]
