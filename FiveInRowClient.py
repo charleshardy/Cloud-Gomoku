@@ -33,6 +33,10 @@ NAVYBLUE      = ( 60,  60, 100)
 
 GRID_LINE     = (105,  50,   6)
 
+DRAW = 0
+CONTINUE = 1
+WIN = 2
+ERROR = 3
 
 cloud_service = "Mashery"
 
@@ -683,7 +687,7 @@ if __name__ == "__main__":
                     data = json.loads(self.node.getData(data_id))
                     print ("data: %s" % str(data))
                     #if self.your_turn == True:
-                    if not data['Status'] == 0 and not data['Status']:
+                    if not data['Status'] == 0 and data['Status']:
                         try: pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':data}))
                         except:
                             print("Fail to post event ")
@@ -734,6 +738,24 @@ if __name__ == "__main__":
 
                 if ev.type == pg.USEREVENT+1:
                      print "# new user event!"
+                     print "---------------ev.data[seqid]=" + str(ev.data['SeqID'])
+                     self.turn = ev.data['SeqID'] % 2
+                     self.pawn = self.turn^1
+                     result = ev.data['Status']
+                     if CLIENT_ROLE == self.pawn:
+                         if result == WIN:
+                             self.won_game = True
+                         elif result == CONTINE:
+                             pass    
+                         else:
+                          # generated error
+                          # To be done
+                              pass
+                     else: #peer draw
+                         X = ev.data['PosX']
+                         Y = ev.data['PosY']
+                         self.put_pawn(X, Y, self.black_image if self.turn else self.white_image)
+                         self.your_turn = True                    
 #                    #if ev.data['action'] == 'assigned':
 #                    #    self.clientId = ev.data['clientId']
 #                    #    self.clientRole = ev.data['clientRole']
@@ -763,10 +785,7 @@ if __name__ == "__main__":
                      x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
                      if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1:
                          if self.grid[x][y] == 0:
-                             if TOUCH_SCREEN == True:
-                                 self.put_pawn(x,y, self.black_image)
-                             else:
-                                 self.put_pawn(x,y, self.black)
+                             self.put_pawn(x,y, self.white_image if CLIENT_ROLE else self.black_image)
 
                              self.put_chess_to_cloud((x,y))
                              self.your_turn = False
