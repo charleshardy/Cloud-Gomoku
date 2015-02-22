@@ -7,7 +7,20 @@ import mashery_api
 
 debug = False
 
-def get(url, headers, ssl = False):
+def get(url, headers, payload = None, ssl = False):
+	if payload:
+		if not "?" in url:
+			parameters = "?"
+		elif url[-1] != "&":
+			parameters = "&"
+		else:
+			parameters = ""
+
+		for k, v in payload.items():
+			parameters += k + "=" + v + "&"
+
+		url += parameters
+
 	if debug:
 		print("GET %s" % url)
 		print("  Headers: %s" % headers)

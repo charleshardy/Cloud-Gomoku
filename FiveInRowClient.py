@@ -4,8 +4,9 @@
 camp 2015 in WindRiver.com"""
 
 import os
+import sys, getopt
 import pygame as pg
-import socket
+#import socket
 import threading
 import json
 from toolbox import button
@@ -13,13 +14,7 @@ from toolbox import tools
 
 # Cloud API
 from node import Node
-from config import mashery_cloud_config
-
-#TODO
-#from ..pyCloundAPILib import *
-#from ..pyCloundAPILib.node import Node
-#from ..pyCloundAPILib.config import mashery_cloud_config
-
+from config import *
 
 #                 R    G    B
 GRAY          = (100, 100, 100)
@@ -38,43 +33,53 @@ NAVYBLUE      = ( 60,  60, 100)
 
 GRID_LINE     = (105,  50,   6)
 
-#CHESS_BOARD_BLOCK_COUNTS = 14
-#CHESS_BOARD_BLOCK_COUNTS = 8
-CHESS_BOARD_BLOCK_COUNTS = 10
 
-#TOUCH_SCREEN = False
-TOUCH_SCREEN = True
+cloud_service = "Mashery"
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    config = {'CHESS BOARD BLOCK COUNTS': 10, 'SCREEN WIDTH': 320, 'SCREEN HIGHT': 240, 
-        'USER NAME': 'You', 'FIRST START': True, 'TOUCH SCREEN': True}
+    inputfile = ''
+    try:
+        opts, args = getopt.getopt(sys.argv[1:],"hi:",["ifile="])
+    except getopt.GetoptError:
+        print 'FiveInRowClient.py -i <inputfile>'
+        sys.exit(2)
+
+    for opt, arg in opts:
+        if opt == '-h':
+            print 'FiveInRowClient.py -i <inputfile>'
+            sys.exit()
+        elif opt in ("-i", "--ifile"):
+            inputfile = arg
+    print 'Input file is ', inputfile
+
+    #config = {'CHESS BOARD BLOCK COUNTS': 10, 'SCREEN WIDTH': 320, 'SCREEN HIGHT': 240, 
+    #    'USER NAME': 'Charles', 'TOUCH SCREEN': True, 
+    #    'CLOUD_SERVICE': 'Mashery', 
+    #    'BOARD MARGIN LEFT': 15, 'BOARD MARGIN TOP': 15, 'CHESS RADIUS': 10,
+    #    'CLIENT ROLE': 1  # (BLACK) First Start
+    #    }
 
     #with open('config.json', 'w') as f:
     #    json.dump(config, f)
+    #exit()
 
-    with open('config.json', 'r') as f:
+    #with open('config.json', 'r') as f:
+    with open(inputfile, 'r') as f:
         config = json.load(f)
+    print "config:", config
 
     CHESS_BOARD_BLOCK_COUNTS = config['CHESS BOARD BLOCK COUNTS']
     SCREEN_WIDTH = config['SCREEN WIDTH']
     SCREEN_HIGHT = config['SCREEN HIGHT']
     TOUCH_SCREEN = config['TOUCH SCREEN']
+    BOARD_MARGIN_LEFT = config['BOARD MARGIN LEFT']
+    BOARD_MARGIN_TOP = config['BOARD MARGIN TOP']
+    CHESS_RADIUS = config['CHESS RADIUS']
+         
     USER_NAME = config['USER NAME']
-    FIRST_START = config['FIRST START']
+    CLIENT_ROLE = config['CLIENT ROLE']
 
-    ##write it back to the file
-    #with open('config.json', 'w') as f:
-    #    json.dump(config, f)
-    
-    #exit()
-
-    #if TOUCH_SCREEN == True:
-    #    SCREEN_WIDTH = 320
-    #    SCREEN_HIGHT = 240
-    #else:
-    #    SCREEN_WIDTH = 800
-    #    SCREEN_HIGHT = 600
 
     class Game(tools.States):
         def __init__(self):
@@ -85,33 +90,6 @@ if __name__ == '__main__':
 
             self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
 
-            # TODO: input box
-            text = "Please input your name:"
-            self.waiting_text, self.waiting_rect = self.make_text(text, GREEN, 
-                (SCREEN_WIDTH // 2 , 
-                SCREEN_HIGHT // 2), 14)
-
-            name = ""
-            font = pg.font.Font(None, 50)
-            for evt in pg.event.get():
-                if evt.type == pg.KEYDOWN:
-                    if evt.unicode.isalpha():
-                        name += evt.unicode
-                    elif evt.key == pg.K_BACKSPACE:
-                        name = name[:-1]
-                    elif evt.key == pg.K_RETURN:
-                        print "name:", name
-                        break
-                elif evt.type == pg.QUIT:
-                    return
-            self.scr.fill((0, 0, 0))
-            block = font.render(name, True, (255, 255, 255))
-            rect = block.get_rect()
-            rect.center = self.scr.get_rect().center
-            self.scr.blit(block, rect)
-            pg.display.flip()
-
-
             text = "Waiting for cloud server ..."
             self.waiting_text, self.waiting_rect = self.make_text(text, GREEN, 
                 (SCREEN_WIDTH // 2 , 
@@ -120,69 +98,40 @@ if __name__ == '__main__':
             self.scr.blit(self.waiting_text, self.waiting_rect)
             pg.display.update()
             
-            self.init_client_conn_cloud_api()
 
-            self.T = threading.Thread(target=self.read_from_cloud)
-            self.T.start()
+            # 1 Regist and start game get game ID, client role
+            self.debug = True
+            self.role_id = 0 # Host as default
+            self.players = 0 # 
+            self.game_id = 1 # 
+            self.seq_id = 0
 
-            # 1 Regist
+            self.init_for_cloud()
+
+
+            r = self.client_register({ "name": USER_NAME })
+            if not r:
+                print("fails to first player register")
+            else:
+                r = json.loads(r)
+                print("First player register: role id %d, game id %d" % (r["roleId"], r["gameId"]))
+
+            # TODO (enabling quit in thread)
+            # Get player 2 user name (blocking)
+            self.player2_name = self.get_player2_name(self.game_id)
     
-            # 2 Get id and role from server (clientId is 0 as the host)
-            # Reponse from server in Jason format :
-            #{
-            #   "action"     : "assigned",
-            #   "clientID"   : "0",
-            #   "clientRole" :  "host",
-            #}
-            self.clientId = "-1"
-
-            while self.clientId == "-1":
-                ev = pg.event.wait()
-                if ev.type == pg.KEYDOWN and ev.key == pg.K_ESCAPE or ev.type == pg.QUIT:
-                    self.done = True
-                    self.clean()
-                elif ev.type == pg.USEREVENT+1:
-                    if ev.data['action'] == 'assigned':
-                        self.clientId = ev.data['clientId']
-                        self.clientRole = ev.data['clientRole']
-                        break
-                    else: event.post(ev)
-
-            print "self.clientId:", self.clientId
-            print "self.clientRole:", self.clientRole
-
-
             self.clock = pg.time.Clock()
     
             # load background image
             self.board = pg.image.load('resources/images/Board.png')
-
             self.black = pg.image.load('resources/images/Black.png')
             self.white = pg.image.load('resources/images/White.png')
         
-            # start fullscreen mode
-            if TOUCH_SCREEN == True:
-                #self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT), pg.FULLSCREEN)
-                self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
-            else:
-                self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
+            self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
     
-            # turn off the mouse pointer
-            #if TOUCH_SCREEN == True:
-                ##pg.mouse.set_visible(0)
-                #pg.event.set_allowed(None)
-                #pg.event.set_allowed(pg.MOUSEBUTTONDOWN)
-                ##pg.event.set_allowed(pg.MOUSEBUTTONDOWN)
-                ##pg.event.set_allowed(pg.MOUSEBUTTONUP)
-    
-            if TOUCH_SCREEN == True:
-                self.board_margin_left = 15
-                self.board_margin_top = 15
-                self.chess_radius = 10
-            else:
-                self.board_margin_left = 20
-                self.board_margin_top = 20
-                self.chess_radius = 18
+            self.board_margin_left = BOARD_MARGIN_LEFT
+            self.board_margin_top = BOARD_MARGIN_TOP
+            self.chess_radius = CHESS_RADIUS
     
             self.block_width = ((SCREEN_WIDTH * 833 // 1000) - self.board_margin_left * 2) // ( CHESS_BOARD_BLOCK_COUNTS + 1 )
             self.block_hight = self.block_width
@@ -235,6 +184,45 @@ if __name__ == '__main__':
             self.setup_btns()
             
             self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
+
+            self.draw_user_info()
+
+            #self.put_pawn(0,0, self.black_image)
+            #self.put_pawn(1,1, self.white_image)   
+           
+            #self.put_pawn(0,0, self.black)
+            #self.put_pawn(1,1, self.white)   
+
+            pg.display.update()
+    
+            self.grid = [[0 for x in range(CHESS_BOARD_BLOCK_COUNTS + 1)] for y in range(CHESS_BOARD_BLOCK_COUNTS + 1)]
+
+                # Let server known after chess board shown done?
+#                data = {'clientId':self.clientId, 'action':'show board', 'status':'done'}
+#                try: self.conn.send(json.dumps(data))
+#                except: print('pipe broken')
+            
+            ### Your turn: Put down the first chess at the center of the board
+            if CLIENT_ROLE == 1:
+                self.your_turn = True 
+            else:
+                self.your_turn = False
+           
+            self.T = threading.Thread(target=self.read_from_cloud)
+            self.T.start()
+    
+            # 4 Gaming/run (end natually/quit/replay/)
+            # Get actions from server
+            # Take actions when gets data from socket
+
+            #self.done = False
+            #while not self.done: self.gaming()
+    
+            # Show Game results
+            # self.done = False
+    
+        def draw_user_info(self):
+        
             # Guest1
             if TOUCH_SCREEN == True:
                 #TODO
@@ -244,9 +232,9 @@ if __name__ == '__main__':
                     (x1, 
                     1*self.block_hight + self.board_margin_top)))
     
-                text = "Guest1"
+                text = self.player2_name
                 self.guest_text, self.guest_rect = self.make_text(text, YELLOW, 
-                    (x1 + (self.chess_radius * 2) + self.board_margin_left + 2 , 
+                    (x1 + (self.chess_radius * 2) + self.board_margin_left + 2, 
                     1*self.block_hight + self.board_margin_top + self.chess_radius - 1), 14)
     
                 # Your chess
@@ -259,8 +247,6 @@ if __name__ == '__main__':
                     (x1 + (self.chess_radius * 2) + self.board_margin_left - 2, 
                     5*self.block_hight + self.board_margin_top + self.chess_radius - 1), 14)
 
-                self.put_pawn(0,0, self.black_image)
-                self.put_pawn(1,1, self.white_image)   
             else: 
                 pg.display.update(self.scr.blit(self.white,
                     (CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2 + 20, 
@@ -277,41 +263,75 @@ if __name__ == '__main__':
                     (CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2 + 20, 
                     10*self.block_hight + self.board_margin_top)))
     
-                text = "You" 
+                text = USER_NAME
                 self.host_text, self.host_rect = self.make_text(text, YELLOW, 
                     (CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2 + self.chess_radius * 2 + 20 + 20, 
                     10*self.block_hight + self.board_margin_top + self.chess_radius), 
                     20)
-           
-                self.put_pawn(0,0, self.black)
-                self.put_pawn(1,1, self.white)   
 
-            pg.display.update()
+        def set_dataitem(self,node, data_name, data_val):
+            data_id = node.dataId(data_name)
     
-            self.grid = [[0 for x in range(CHESS_BOARD_BLOCK_COUNTS + 1)] for y in range(CHESS_BOARD_BLOCK_COUNTS + 1)]
+            if self.debug:
+                    print("setting data item %s = %s" % (data_id, str(data_val)))
+    
+            if not node.setData(data_id, json.dumps(data_val)):
+                    print("Fail to set data item %s = %s" % (data_id, data_val))
+                    return False
+    
+            return True
+    
+        def get_dataitem(self, node, data_id):
+            val = node.getData(data_id)
+            if not val:
+                    print("Fail to query data item %s" % data_id)
+                    return None
+    
+            if self.debug:
+                    print("fetch data item %s = %s" % (data_id, str(val)))
+    
+            return val
+    
+        def __update_role_id(self):
+            r = self.role_id
+            self.role_id += 1
+            self.role_id &= 1
+            if self.debug:
+                    print("assign new role id %d" % r)
+            return r
 
-            if TOUCH_SCREEN == True:
-                pass
-            else:
-                pass
-                # Let server known after chess board shown done?
-#                data = {'clientId':self.clientId, 'action':'show board', 'status':'done'}
-#                try: self.conn.send(json.dumps(data))
-#                except: print('pipe broken')
+        def init_for_cloud(self):
+            self.node = Node(cloud_service, cloud_configs[cloud_service])
+
+        def client_register(self,user_config):
+            """
             
-            ### Your turn: Put down the first chess at the center of the board
-            self.your_turn = True 
+            Return: boolean
+            """
+            if not user_config.get("name"):
+                    return False
     
-            # 4 Gaming/run (end natually/quit/replay/)
-            # Get actions from server
-            # Take actions when gets data from socket
+            # FIXME: groovy script will first check if the player already exists, then
+            # assign an unique id and create a data item named with
+            # "player_dataitem_prefix + player_id" if the player doesn't exist.
+            data_id = self.node.dataId("vlv_player_" + user_config["name"])
+    
+            if not self.set_dataitem(self.node, data_id, json.dumps(user_config)):
+                    return None
+    
+            
+#            role_id = self.__update_role_id()
+#    
+#            self.players += 1
+#            if self.players == 2:
+#                    node.setData(node.dataId("game_id"), self.game_id)
+#    
+#            return json.dumps({
+#                    "gameId": self.game_id,
+#                    "roleId": role_id
+#            })
 
-            #self.done = False
-            #while not self.done: self.gaming()
-    
-            # Show Game results
-            # self.done = False
-    
+
         def draw_grid(self, n):
             for i in range(0, n + 1):
                 # Rows
@@ -462,12 +482,6 @@ if __name__ == '__main__':
                 y1 = self.board_margin_top + (y * self.block_width) - self.chess_radius
                 y2 = self.board_margin_top + (y * self.block_width) + self.chess_radius
                 pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
-
-        def init_client_conn_cloud_api(self):
-            self.data_name = "vlv_benchmark"
-            self.node = Node(mashery_cloud_config)
-            self.data_id = self.node.dataId(self.data_name)
-            print "self.data_id:", self.data_id
 
         def init_client_conn_socket(self):
             self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -637,32 +651,46 @@ if __name__ == '__main__':
             else:
                 self.buttons = [self.btn1, self.btn2]
 
+        def get_player2_name(self, game_id):
+            # TODO
+            #node = Node(cloud_service, cloud_configs[cloud_service])
+            #data_id = node.dataId("GMETA_" + game_id)
+
+            #game_meta_id_table = get_dataitem(node, data_id)
+            game_meta_id_table = {
+                "Name": "Charles",
+                "Name": "Player2",
+            }
+            json.dumps(game_meta_id_table)
+
+            for player_name in game_meta_id_table['Name']:
+                if not player_name == USER_NAME:
+                    player2_name = player_name
+                    return player2_name
+
+            return None
+
+
         def read_from_cloud(self):
+
+            data_name = "GMOVE_" + str(self.game_id)
+            data_id = self.node.dataId(data_name)
+
             while not self.done:
-                try: data = json.loads(self.node.getData(self.data_id))
+                try: 
+                    data = json.loads(self.node.getData(data_id))
+                    print ("data: %s" % str(data))
+                    #if self.your_turn == True:
+                    if not data['Status'] == 0 and not data['Status']:
+                        try: pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':data}))
+                        except:
+                            print("Fail to post event ")
+                            break
                 except:
-                    print("Fail to get data %s" % self.data_name)
+                    print("Fail to get data %s" % data_name)
                     #break
-                try: pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':data}))
-                except:
-                    print("Fail to post event ")
-                    break
             print "## read_from_cloud thread exit"
 
-        def read_from_socket(self):
-            #self.soc.setblocking(0)
-            while not self.done:
-                try: data = json.loads(self.conn.recv(1024))
-                except:
-                    print('pipe broken')
-                    data = 'quit'
-                if data == 'quit':
-                    self.done = True
-                    break
-                pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':data}))
-                print "# rec data:", data
-            print "## thread exit"
-            
         def quit_click(self):
             self.done = True
             #if TOUCH_SCREEN == True:
@@ -703,26 +731,27 @@ if __name__ == '__main__':
                     button.check_event(ev)
 
                 if ev.type == pg.USEREVENT+1:
-                    #if ev.data['action'] == 'assigned':
-                    #    self.clientId = ev.data['clientId']
-                    #    self.clientRole = ev.data['clientRole']
-
-                    if ev.data['action'] == "put chess" and ev.data['clientId'] == self.clientId:
-                        print "Your turn please!"
-                        self.your_turn = True
-
-                    elif ev.data['action'] == "update chess":
-                        x,y = ev.data['pos']
-                        if TOUCH_SCREEN == True:
-                            self.put_pawn(x,y, self.white_image)
-                        else:
-                            self.put_pawn(x,y, self.white)
-                        #self.put_pawn(x,y, 'white')
-                        self.grid[x][y] = 2 # 2: white
-                        self.your_turn = True
-
-                    else:
-                        print ('Unhandled other USER event %s' % str(ev.data))
+                     print "# new user event!"
+#                    #if ev.data['action'] == 'assigned':
+#                    #    self.clientId = ev.data['clientId']
+#                    #    self.clientRole = ev.data['clientRole']
+#
+#                    if ev.data['action'] == "put chess" and ev.data['clientId'] == self.clientId:
+#                        print "Your turn please!"
+#                        self.your_turn = True
+#
+#                    elif ev.data['action'] == "update chess":
+#                        x,y = ev.data['pos']
+#                        if TOUCH_SCREEN == True:
+#                            self.put_pawn(x,y, self.white_image)
+#                        else:
+#                            self.put_pawn(x,y, self.white)
+#                        #self.put_pawn(x,y, 'white')
+#                        self.grid[x][y] = 2 # 2: white
+#                        self.your_turn = True
+#
+#                    else:
+#                        print ('Unhandled other USER event %s' % str(ev.data))
     
                 elif self.your_turn == True and ev.type == pg.MOUSEBUTTONUP and ev.button == 1:
                 #elif self.your_turn == True and ev.type == pg.MOUSEBUTTONDOWN and ev.button == 1:
@@ -736,15 +765,16 @@ if __name__ == '__main__':
                                  self.put_pawn(x,y, self.black_image)
                              else:
                                  self.put_pawn(x,y, self.black)
+
+                             self.put_chess_to_cloud((x,y))
+                             self.your_turn = False
                              # TODO     
 ## Server
-
 #                                 self.grid[x][y] = 1 # 1: black
 #                                 print "### 1 ### grid[x][y]", str(self.grid[x][y])
 #                                 data = {'clientId':self.clientId, 'action':'put chess', 'pos':[x, y]}
 #                                 try: self.conn.send(json.dumps(data))
 #                                 except: print('pipe broken')
-#                                 self.your_turn = False
 
 ### Server
                 #elif self.your_turn == True and ev.type == pg.MOUSEMOTION:
@@ -764,6 +794,16 @@ if __name__ == '__main__':
 
                 else:
                     print "#### ev.type:", str(ev.type)
+
+        def put_chess_to_cloud(self, (x,y)):
+            data_name="GMOVE_" + str(self.game_id)
+            data_id = self.node.dataId(data_name)
+            self.seq_id += 1
+            data_val = {'SeqID': self.seq_id, 'PosX': x, 'PosY': y, 'Status': 0}
+            if not self.node.setData(data_id, json.dumps(data_val)):
+                print("Fail to set data %s = %s" % (data_name, data_val))
+            else:
+                print("Data set chess pos (x:%s, y%s) to cloud" % (str(x), str(y))),
 
         #def won_game(self):
         #    return True
