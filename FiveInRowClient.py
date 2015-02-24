@@ -704,31 +704,33 @@ if __name__ == "__main__":
             self.his_data = []
             data_name = "GMOVE_" + str(self.game_id)
             data_id = self.node.dataId(data_name)
-            datas = self.node.getHistoricalData(data_id, pageSize=1000, sortAscending=True)
+            datas = self.node.getHistoricalData(data_id, pageSize=1000)
             if len(datas) == 0:
                 print "No game data"
                 self.fetch_data = False
                 self.done = True
                 return
             for i in range(len(datas)):
+                print("Raw move ", datas[i]);
                 try:data = json.loads(datas[i])
                 except:
                     continue
-                if not data['Status'] == 0 and data['Status']:
+                if data['Status'] > 0 and data['Status']:
                     print("Got %s move "% data['SeqID'], datas[i]);
-                    self.his_data.insert(data['SeqID'],data)
+                    j = int(data['SeqID'])
+                    self.his_data.insert(j,data)
 			#Only last entry to judge if game is over
-            if data['Status'] == 2:
+            if self.his_data[j]['Status'] == 2:
                 self.fetch_data = False
                 #print("Got End @ %s", str(data['SeqID']))
-            self.his_data_len=data['SeqID'];
+            self.his_data_len=j;
             #debug
             #self.fetch_data = False
             #Draw current status
-            print("his data total move, %s"%str(data))
+            print("his data total %d,move"%self.his_data_len)
             if self.fetch_data == True:
                 for i in range(1, self.his_data_len+1):
-                    print("Move %d, data" %i, self.his_data[i])
+                    print('his data %s'%str(self.his_data[i]))
                     pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':self.his_data[i]}))
                     self.events()
             else:
