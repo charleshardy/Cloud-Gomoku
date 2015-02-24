@@ -126,7 +126,7 @@ while True:
     if vlv_GAME_S_ID != "None":
         vlv_GAME_NEW_ID = string.atoi(vlv_GAME_S_ID)
         if vlv_GAME_NEW_ID > vlv_GAME_ID:
-            while vlv_GMAE_NEW_ID > vlv_GAME_ID:
+            while vlv_GAME_NEW_ID > vlv_GAME_ID:
                 game_id = 'vlv_GMOVE_' + str(vlv_GAME_ID)
                 game = Game(game_id)   
                 game.start()
