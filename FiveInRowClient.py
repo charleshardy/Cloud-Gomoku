@@ -157,7 +157,6 @@ if __name__ == "__main__":
 
             tools.States.__init__(self)
 
-
             self.won_game = False
             self.screen_rect = self.scr.get_rect()
             self.overlay = pg.Surface((self.screen_rect.width, self.screen_rect.height))
@@ -552,38 +551,46 @@ if __name__ == "__main__":
                 r1 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
                         self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)
                 self.scr.blit(self.board_image,r1,r1)
+                pg.display.update(r1)
 
                 r2 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
                         self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)
                 self.scr.blit(self.board_image,r2,r2)
+                pg.display.update(r2)
 
                 # right top
                 r3 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
                         self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8,2,8)
                 self.scr.blit(self.board_image,r3,r3)
+                pg.display.update(r3)
 
                 r4 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
                         self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)
                 self.scr.blit(self.board_image,r4,r4)
+                pg.display.update(r4)
 
                 # ----------------------------------------------           
                 # left down
                 r5 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
                         self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)
                 self.scr.blit(self.board_image,r5,r5)
+                pg.display.update(r5)
 
                 r6 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
                         self.last_put_Y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8 ,2,8)
                 self.scr.blit(self.board_image,r6,r6)
+                pg.display.update(r6)
 
                 # right down
                 r7 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
                         self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1 ,8,2)
                 self.scr.blit(self.board_image,r7,r7)
+                pg.display.update(r7)
 
                 r8 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
                         self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1 ,2,8)
                 self.scr.blit(self.board_image,r8,r8)
+                pg.display.update(r8)
                  
         def put_pawn(self,x,y,color):
             print ("### put chess (x: %s, y: %s)" % (x,y))
