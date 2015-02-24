@@ -43,6 +43,7 @@ class Game(threading.Thread):
         self.pos.extend([['_']*CHESS_BOARD_BLOCK_COUNTS for foo in range(CHESS_BOARD_BLOCK_COUNTS)])
 
 	current_role = 0
+        timeout = 1000
 	while game_not_over:
         # get data
 	    try: data = json.loads(self.node.getData(self.data_id))
@@ -50,8 +51,12 @@ class Game(threading.Thread):
                 print("Fail to get data %s" % self.data_name)
                 continue
             if data['Status'] != DRAW:
+                timeout -= 1
+                if timeout == 0:
+                    game_not_over = False
 	        continue
 	    else:
+                timeout = 1000
 	        current_role = data['SeqID'] % 2
 	        self.current_pawn = current_role^1
 	        X = data['PosX']
