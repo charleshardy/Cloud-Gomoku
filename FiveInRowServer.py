@@ -63,10 +63,10 @@ class Game(threading.Thread):
 		    except:
 		        print("Fail to set data %s" % self.data_name)
 		        return
-	        self.pos[X][Y] = self.current_pawn
+	        self.pos[X][Y] = str(self.current_pawn)
                 self.actual_pos = (X, Y)
 	        result = self.is_winner()
-	        new_data = {'SeqID':data['SeqID'], 'PosX':data['PosX'], 'PosY':data['PosY'], 'Status':result}
+	        new_data = {'SeqID':data['SeqID'], 'PosX':data['PosX'], 'PosY':data['PosY'], 'Status':result, 'WinSpawns':self.winnerspawns}
 		try: self.node.setData(self.data_id, json.dumps(new_data))
                 except:
                     print("Fail to set data %s" % self.data_name)
@@ -81,20 +81,21 @@ class Game(threading.Thread):
         X,Y = self.actual_pos
         pawn = self.current_pawn
         row1 = [((X,y),self.pos[X][y])for y in range(CHESS_BOARD_BLOCK_COUNTS)]#+[('',invpawn)]
-        #print "----------row1="+str(row1)
+        print "----------row1="+str(row1)
         row2 = [((x,Y),self.pos[x][Y])for x in range(CHESS_BOARD_BLOCK_COUNTS)]#+[('',invpawn)]
-        #print "----------row2="+str(row2)
+        print "----------row2="+str(row2)
         foo = X-Y
         row3 = [((x,x-foo),self.pos[x][x-foo])for x in range(CHESS_BOARD_BLOCK_COUNTS)if x-foo<CHESS_BOARD_BLOCK_COUNTS]#+[('',invpawn)]
         foo = X+Y
         row4 = [((x,foo-x),self.pos[x][foo-x])for x in range(CHESS_BOARD_BLOCK_COUNTS)if foo-x<CHESS_BOARD_BLOCK_COUNTS]#+[('',invpawn)]
-        #print "----------row3="+str(row3)
-        #print "----------row4="+str(row4)
+        print "----------row3="+str(row3)
+        print "----------row4="+str(row4)
         for row in (row1,row2,row3,row4):
             coords,pawns = zip(*row)
-            pawns = ''.join(str(pawns))
-         #   print "-------coords="+str(coords)
-          #  print "-------pawns="+str(pawns)
+            pawns = ''.join(pawns)
+            print "-------coords="+str(coords)
+            print "-------pawns="+str(pawns)
+	    print "-------pawn="+str(pawn)*5
             index1 = pawns.find(str(pawn)*5)
             if index1 == -1: continue
             #index2 = pawns[index1:].find(pawn+invpawn)
@@ -104,9 +105,11 @@ class Game(threading.Thread):
             #if index2 == -1: continue
            # print "-----index1="+str(index1)
             #print "-----index2="+str(index2)
-            self.winnerspawns.extend(coords[index1:index1+5])
+            self.winnerspawns.extend((coords[index1:index1+1]))
+            self.winnerspawns.extend((coords[index1+4:index1+5]))
        # print "-------self.winnerspawns="+str(self.winnerspawns)
 	if self.winnerspawns:
+            print "----------------winnerspawns="+str(self.winnerspawns)
             return WIN
 	else:
 	    return CONTINUE
