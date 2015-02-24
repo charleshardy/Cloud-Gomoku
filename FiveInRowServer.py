@@ -114,12 +114,23 @@ class Game(threading.Thread):
 	else:
 	    return CONTINUE
 
-#data_name = gmeta_001
-#cloud_name = "Mashery"
-#node = Node(cloud_name, cloud_configs[cloud_name])
-#data_id = node.dataId(data_name)
-#data = {'Player1':'client1', 'Player2':'client2', 'Status':2}
-#node.setData(data_id, json.dumps(data))
-game1 = Game('GMOVE_1')
-game1.start()
+data_name = "vlv_game_id"
+cloud_name = "Mashery"
+node = Node(cloud_name, cloud_configs[cloud_name])
+data_id = node.dataId(data_name)
+
+vlv_GAME_ID = string.atoi(node.getData(data_id))
+
+while True:
+    vlv_GAME_S_ID = node.getData(data_id)
+    if vlv_GAME_S_ID != "None":
+        vlv_GAME_NEW_ID = string.atoi(vlv_GAME_S_ID)
+        if vlv_GAME_NEW_ID > vlv_GAME_ID:
+            while vlv_GMAE_NEW_ID > vlv_GAME_ID:
+                game_id = 'vlv_GMOVE_' + str(vlv_GAME_ID)
+                game = Game(game_id)   
+                game.start()
+
+                print "========vlv_GAME_ID="+str(vlv_GAME_ID)
+                vlv_GAME_ID += 1
 
