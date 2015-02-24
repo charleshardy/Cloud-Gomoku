@@ -123,7 +123,8 @@ vlv_GAME_ID = string.atoi(node.getData(data_id))
 
 while True:
     vlv_GAME_S_ID = node.getData(data_id)
-    if vlv_GAME_S_ID != "None":
+    if vlv_GAME_S_ID != None:
+        print "=================vlv_GAME_S_ID = "+ str(vlv_GAME_S_ID)
         vlv_GAME_NEW_ID = string.atoi(vlv_GAME_S_ID)
         if vlv_GAME_NEW_ID > vlv_GAME_ID:
             while vlv_GAME_NEW_ID > vlv_GAME_ID:
