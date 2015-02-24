@@ -124,24 +124,20 @@ if __name__ == "__main__":
 
             # 1 Regist and start game get game ID, client role
             self.debug = True
-            self.role_id = 0 # Host as default
-            self.players = 0 # 
-            self.game_id = 1 # 
+            #self.role_id = '0' # Host as default
             self.seq_id = 0
 
             self.init_for_cloud()
-
-
-            r = self.client_register({ "name": USER_NAME })
+            r = self.client_register()
             if not r:
                 print("fails to first player register")
             else:
                 r = json.loads(r)
-                print("First player register: role id %d, game id %d" % (r["roleId"], r["gameId"]))
+                #print "### r", r
+                #print("First player register: role id %s, game id %s" % (r["roleId"], r["gameId"]))
+                self.game_id = r["gameId"]
+                self.role_id = r["roleId"]
 
-            # TODO (enabling quit in thread)
-            # Get player 2 user name (blocking)
-            self.player2_name = self.get_player2_name(self.game_id)
     
             self.clock = pg.time.Clock()
     
@@ -205,6 +201,10 @@ if __name__ == "__main__":
             
             self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
 
+            # TODO (enabling quit in thread)
+            # Get player 2 user name (blocking)
+            self.competitor_name = self.get_competitor_name(self.game_id,self.role_id)
+
             self.draw_user_info()
 
             
@@ -248,7 +248,7 @@ if __name__ == "__main__":
                 1*self.block_hight + self.board_margin_top)))
 
             x1 = self.right_board_x + (SCREEN_WIDTH - self.right_board_x)/2
-            text = self.player2_name
+            text = self.competitor_name
             self.guest_text, self.guest_rect = self.make_text(text, YELLOW, 
                 (x1,
                 1*self.block_hight + self.board_margin_top - self.chess_radius), name_font_size)
@@ -299,33 +299,19 @@ if __name__ == "__main__":
         def init_for_cloud(self):
             self.node = Node(cloud_service, cloud_configs[cloud_service])
 
-        def client_register(self,user_config):
-            """
+        def client_register(self):
+
+            scripto = self.node.cloud.scripto()
+
+            registration = json.dumps({
+         	"playerName": USER_NAME,
+            })
+            data = {
+            "registration": registration
+            }
             
-            Return: boolean
-            """
-            if not user_config.get("name"):
-                    return False
-    
-            # FIXME: groovy script will first check if the player already exists, then
-            # assign an unique id and create a data item named with
-            # "player_dataitem_prefix + player_id" if the player doesn't exist.
-            data_id = self.node.dataId("vlv_player_" + user_config["name"])
-    
-            if not self.set_dataitem(self.node, data_id, json.dumps(user_config)):
-                    return None
-    
-            
-#            role_id = self.__update_role_id()
-#    
-#            self.players += 1
-#            if self.players == 2:
-#                    node.setData(node.dataId("game_id"), self.game_id)
-#    
-#            return json.dumps({
-#                    "gameId": self.game_id,
-#                    "roleId": role_id
-#            })
+            r = scripto.execute('vlvRegistration', data)
+            return r
 
 
         def draw_grid(self, n):
@@ -656,31 +642,27 @@ if __name__ == "__main__":
             self.buttons = [self.btn1]
             #self.buttons = [self.btn1, self.btn2]
 
-        def get_player2_name(self, game_id):
-            # TODO
-            #node = Node(cloud_service, cloud_configs[cloud_service])
-            #data_id = node.dataId("GMETA_" + game_id)
+        def get_competitor_name(self, game_id, role_id):
 
-            #game_meta_id_table = get_dataitem(node, data_id)
-            game_meta_id_table = {
-                "Player1": "Charles",
-                "Player2": "Player2",
-            }
-            json.dumps(game_meta_id_table)
-            return "Player2"
+            data_id = self.node.dataId("vlv_GMETA_" + game_id)
 
-            for player_name in game_meta_id_table['Name']:
-                if not player_name == USER_NAME:
-                    player2_name = player_name
-                    return player2_name
-         
-
-            return None
-
+            while not self.done:
+                gmeta = self.get_dataitem(self.node, data_id)
+                competitor_name = '' 
+                if gmeta:
+                    data = json.loads(gmeta)
+                    print "### data : ", data
+                    if role_id == '0':
+                        competitor_name = data['player2']
+                    elif role_id == '1':
+                        competitor_name = data['player1']
+                    if not competitor_name == '':
+                        print "### competitor_name", competitor_name
+                        return competitor_name
 
         def read_from_cloud(self):
 
-            data_name = "GMOVE_" + str(self.game_id)
+            data_name = "vlv_GMOVE_" + str(self.game_id)
             data_id = self.node.dataId(data_name)
             old_data = ''
             while not self.done:
@@ -702,7 +684,7 @@ if __name__ == "__main__":
 
         def get_history_from_cloud(self):
             self.his_data = []
-            data_name = "GMOVE_" + str(self.game_id)
+            data_name = "vlv_GMOVE_" + str(self.game_id)
             data_id = self.node.dataId(data_name)
             datas = self.node.getHistoricalData(data_id, pageSize=1000, sortAscending=True)
             if len(datas) == 0:
@@ -889,7 +871,7 @@ if __name__ == "__main__":
                     self.grid[x][y] = 1 if CLIENT_ROLE else 2
 
         def put_chess_to_cloud(self, (x,y)):
-            data_name="GMOVE_" + str(self.game_id)
+            data_name="vlv_GMOVE_" + str(self.game_id)
             data_id = self.node.dataId(data_name)
             self.seq_id += 1
             data_val = {'SeqID': self.seq_id, 'PosX': x, 'PosY': y, 'Status': DRAW}
