@@ -304,7 +304,7 @@ if __name__ == "__main__":
             scripto = self.node.cloud.scripto()
 
             registration = json.dumps({
-         	"playerName": USER_NAME,
+                "playerName": USER_NAME,
             })
             data = {
             "registration": registration
@@ -668,18 +668,14 @@ if __name__ == "__main__":
             while not self.done:
                 try: 
                     data = json.loads(self.node.getData(data_id))
-                    print ("data: %s" % str(data))
-                    #if self.your_turn == True:
                     if not data['Status'] == 0 and data['Status'] and data != old_data:
                         old_data = data
-                    #    print("----------X=%d, Y=%d, posx=%d, posy=%d" % (X, Y, data['PosX'], data['PosY']))
                         try: pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':data}))
                         except:
                             print("Fail to post event ")
                             break
                 except:
                     print("Fail to get data %s" % data_name)
-                    #break
             print "## read_from_cloud thread exit"
 
         def get_history_from_cloud(self):
@@ -701,7 +697,7 @@ if __name__ == "__main__":
                     print("Got %s move "% data['SeqID'], datas[i]);
                     j = int(data['SeqID'])
                     self.his_data.insert(j,data)
-			#Only last entry to judge if game is over
+                    #Only last entry to judge if game is over
             if self.his_data[j]['Status'] == 2:
                 self.fetch_data = False
                 #print("Got End @ %s", str(data['SeqID']))
@@ -767,6 +763,7 @@ if __name__ == "__main__":
                 if ev.type == pg.USEREVENT+1:
                      #print "# new user event!"
                      #print "---------------ev.data[seqid]=" + str(ev.data['SeqID'])
+                     print "---------------ev.data" + str(ev.data)
                      self.turn = ev.data['SeqID'] % 2
                      self.pawn = self.turn^1
                      result = ev.data['Status']
