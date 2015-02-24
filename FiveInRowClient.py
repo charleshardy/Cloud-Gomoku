@@ -104,10 +104,15 @@ if __name__ == "__main__":
 
             self.scr = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HIGHT))
 
+            # Guest1
+            if TOUCH_SCREEN == True:
+                waiting_font_size = 12
+            else: 
+                waiting_font_size = 20
             text = "Waiting for cloud server ..."
             self.waiting_text, self.waiting_rect = self.make_text(text, GREEN, 
                 (SCREEN_WIDTH // 2 , 
-                SCREEN_HIGHT // 2), 14)
+                SCREEN_HIGHT // 2), waiting_font_size)
 
             self.scr.blit(self.waiting_text, self.waiting_rect)
             pg.display.update()
@@ -212,16 +217,6 @@ if __name__ == "__main__":
            
             self.T = threading.Thread(target=self.read_from_cloud)
             self.T.start()
-    
-            # 4 Gaming/run (end natually/quit/replay/)
-            # Get actions from server
-            # Take actions when gets data from socket
-
-            #self.done = False
-            #while not self.done: self.gaming()
-    
-            # Show Game results
-            # self.done = False
     
         def draw_user_info(self):
         
@@ -586,8 +581,6 @@ if __name__ == "__main__":
                  
         def put_pawn(self,x,y,color):
             print ("### put chess (x: %s, y: %s)" % (x,y))
-            #print ("### x pos : %s" % str(x*self.block_width + self.board_margin_left))
-            #print ("### x pos : %s" % str(x*self.block_width + self.board_margin_left - self.chess_radius))
             pg.display.update(self.scr.blit(color,
                 (x*self.block_width + self.board_margin_left - self.chess_radius, 
                 y*self.block_hight + self.board_margin_top - self.chess_radius)))
@@ -599,23 +592,21 @@ if __name__ == "__main__":
             self.last_put_color = color
 
         def setup_btns(self):
+            
+            if TOUCH_SCREEN == True:
+                button_font_size = 18
+            else: 
+                button_font_size = 22
+
             button_config = {
                 "clicked_font_color" : (0,0,0),
                 "hover_font_color"   : (205,195, 0),
                 'font_color'         : (255,255,255),
-                'font'               : tools.Font.load('impact.ttf', 18),
+                'font'               : tools.Font.load('impact.ttf', button_font_size),
                 'border_color'       : (0,0,0),
                 'border_hover_color' : (100,100,100),
             }
 
-#            button_config = {
-#                "clicked_font_color" : (0,0,0),
-#                "hover_font_color"   : (205,195, 0),
-#                'font'               : tools.Font.load('impact.ttf', 18),
-#                'font_color'         : (255,255,255),
-#                'border_color'       : (0,0,0),
-#            }
-    
             self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
             button_hight = self.board_margin_top * 2
             button_width = SCREEN_WIDTH - self.right_board_x - self.board_margin_left * 2
@@ -685,8 +676,6 @@ if __name__ == "__main__":
 
         def quit_click(self):
             self.done = True
-            #if TOUCH_SCREEN == True:
-            #    self.clean()
             
 
         def show_how_won(self, (x1, y1), (x2, y2)):
@@ -723,17 +712,24 @@ if __name__ == "__main__":
                     button.check_event(ev)
 
                 if ev.type == pg.USEREVENT+1:
-                     print "# new user event!"
-                     print "---------------ev.data[seqid]=" + str(ev.data['SeqID'])
+                     #print "# new user event!"
+                     #print "---------------ev.data[seqid]=" + str(ev.data['SeqID'])
                      self.turn = ev.data['SeqID'] % 2
                      self.pawn = self.turn^1
                      result = ev.data['Status']
+
+                     if result == WIN:
+                         start_pos, end_pos = ev.data['WinSpawns']
+                         #print "## start_pos:", start_pos
+                         #print "## end_pos:", end_pos
+                         self.show_how_won(start_pos, end_pos)
+                         self.won_game = True
+
                      if CLIENT_ROLE == self.pawn:
-                         if result == WIN:
-                             self.won_game = True
-                         elif result == CONTINUE:
+                         if result == CONTINUE:
                              pass    
                          else:
+                          # TODO
                           # generated error
                           # To be done
                               pass
@@ -744,15 +740,11 @@ if __name__ == "__main__":
                          self.put_pawn(X, Y, self.black_image if self.turn else self.white_image)
                          self.your_turn = True                    
                          self.grid[X][Y] = 2 if CLIENT_ROLE else 1
-                         print "### 1 ### grid[X][Y]", str(self.grid[X][Y])
+                         #print "### 1 ### grid[X][Y]", str(self.grid[X][Y])
 #                    else:
 #                        print ('Unhandled other USER event %s' % str(ev.data))
     
-                elif self.your_turn == True and ev.type == pg.MOUSEBUTTONUP and ev.button == 1:
-                #elif self.your_turn == True and ev.type == pg.MOUSEBUTTONDOWN and ev.button == 1:
-                #elif self.your_turn == True and ev.type == pg.MOUSEBUTTONDOWN:
-                #elif ev.type == pg.MOUSEBUTTONDOWN:
-                     #print "#### MOUSEBUTTONDOWN ####"
+                elif self.your_turn == True and ev.type == pg.MOUSEBUTTONUP and ev.button == 1 and not self.won_game == True:
                      x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
                      if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1:
                          if self.grid[x][y] == 0:
@@ -760,9 +752,8 @@ if __name__ == "__main__":
                              self.put_chess_to_cloud((x,y))
                              self.your_turn = False
                              self.grid[x][y] = 1 if CLIENT_ROLE else 2
-                             print "### 2 ### grid[x][y]", str(self.grid[x][y])
-                #elif self.your_turn == True and ev.type == pg.MOUSEMOTION:
-                elif ev.type == pg.MOUSEMOTION:
+                             #print "### 2 ### grid[x][y]", str(self.grid[x][y])
+                elif self.your_turn == True and ev.type == pg.MOUSEMOTION:
                      # TODO
                      #if TOUCH_SCREEN == False and self.your_turn == True:
                      if SHOW_MOUSEMOTION == True:
@@ -777,7 +768,6 @@ if __name__ == "__main__":
     
                                  self.X = x
                                  self.Y = y
-
                 #else:
                 #    print "#### ev.type:", str(ev.type)
 
@@ -791,22 +781,6 @@ if __name__ == "__main__":
             else:
                 print("Data set chess pos (x:%s, y%s) to cloud" % (str(x), str(y))),
 
-        #def won_game(self):
-        #    return True
-     
-        def update_label(self):
-    
-            #self.sec_timelapse, self.sec_timelapse_rect = self.make_text('Sec: {}'.format(self.timelapse), (0,0,0), (60, 150), 20)
-    
-            ##best = DB.load()['save']['shortest']
-            #if not self.best:
-            #    best = None
-            #else:
-            #    best = self.best
-            #self.shortest_time_text, self.shortest_time_rect = self.make_text('Best: {}'.format(best), (0,0,0), (60, 175), 20)
-            pass
-    
-
         def update(self):
             msg = 'Game Over'
             if self.won_game:
@@ -814,19 +788,11 @@ if __name__ == "__main__":
                 y = SCREEN_HIGHT // 2
                 if CLIENT_ROLE == self.pawn:
                     msg = 'You Won!'
-                    self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
-                    #self.game_over, self.game_over_rect = self.make_text(msg, RED, self.screen_rect.center, 50)
                     self.game_over, self.game_over_rect = self.make_text(msg, RED, (x,y), 50)
                 else:
                     msg = 'You Lost!'
-                    #self.game_over, self.game_over_rect = self.make_text(msg, BLUE, self.screen_rect.center, 50)
                     self.game_over, self.game_over_rect = self.make_text(msg, BLUE, (x,y), 50)
 
-            #self.games_won_text, self.games_won_rect = self.make_text('Won: {}'.format(self.games_won), (0,0,0), (60, 200), 20)
-            #self.games_lost_text, self.games_lost_rect = self.make_text('Lost: {}'.format(self.games_lost), (0,0,0), (60, 225), 20)
-            #self.points_text, self.points_rect = self.make_text('Points:', (0,0,0), (60, 250), 20)
-            #self.points_num_text, self.points_num_rect = self.make_text('{}'.format(self.points), (0,0,0), (60, 275), 20)
-            #pass
     
         def render(self):
             #self.screen.fill((255,255,255))
@@ -859,7 +825,7 @@ if __name__ == "__main__":
                 self.update()
                 self.render()
                 pg.display.update()
-                self.clock.tick(60)
+                #self.clock.tick(60)
 
         def clean(self):
             self.T.join(1)
