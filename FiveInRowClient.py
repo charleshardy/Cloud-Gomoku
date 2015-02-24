@@ -795,6 +795,7 @@ if __name__ == "__main__":
 ### Server
                 #elif self.your_turn == True and ev.type == pg.MOUSEMOTION:
                 elif ev.type == pg.MOUSEMOTION:
+                     # TODO
                      #if TOUCH_SCREEN == False and self.your_turn == True:
                      if SHOW_MOUSEMOTION == True:
                          x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
@@ -841,9 +842,18 @@ if __name__ == "__main__":
         def update(self):
             msg = 'Game Over'
             if self.won_game:
-                msg = 'You Won'
-            self.game_over, self.game_over_rect = self.make_text(msg, RED, self.screen_rect.center, 50)
-    
+                x = self.right_board_x // 2
+                y = SCREEN_HIGHT // 2
+                if CLIENT_ROLE == self.pawn:
+                    msg = 'You Won!'
+                    self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
+                    #self.game_over, self.game_over_rect = self.make_text(msg, RED, self.screen_rect.center, 50)
+                    self.game_over, self.game_over_rect = self.make_text(msg, RED, (x,y), 50)
+                else:
+                    msg = 'You Lost!'
+                    #self.game_over, self.game_over_rect = self.make_text(msg, BLUE, self.screen_rect.center, 50)
+                    self.game_over, self.game_over_rect = self.make_text(msg, BLUE, (x,y), 50)
+
             #self.games_won_text, self.games_won_rect = self.make_text('Won: {}'.format(self.games_won), (0,0,0), (60, 200), 20)
             #self.games_lost_text, self.games_lost_rect = self.make_text('Lost: {}'.format(self.games_lost), (0,0,0), (60, 225), 20)
             #self.points_text, self.points_rect = self.make_text('Points:', (0,0,0), (60, 250), 20)
