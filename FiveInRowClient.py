@@ -91,14 +91,18 @@ if __name__ == "__main__":
     USER_NAME = config['USER NAME']
     CLIENT_ROLE = config['CLIENT ROLE']
     SHOW_MOUSEMOTION = False
+    KEYBOARD_INPUT = config['KEYBOARD INPUT']
 
     class Game(tools.States):
         def __init__(self):
 
-            if TOUCH_SCREEN == True:
-                os.putenv('SDL_MOUSEDEV' , '/dev/input/event2')
+            #if TOUCH_SCREEN == True:
+                #os.putenv('SDL_MOUSEDEV' , '/dev/input/event2')
             
             pg.init()
+
+            if TOUCH_SCREEN == True:
+                pg.mouse.set_visible(0)
 
             self.done = False
 
@@ -181,8 +185,6 @@ if __name__ == "__main__":
                 self.last_put_X = 16
                 self.last_put_Y = 16
 
-            self.last_put_color = self.black_image
-
     
             # 3 Show Board
             #self.board_width = 833
@@ -204,6 +206,15 @@ if __name__ == "__main__":
             self.right_board_x = CHESS_BOARD_BLOCK_COUNTS*self.block_width+self.board_margin_left * 2
 
             self.draw_user_info()
+
+            
+            # Init chess focus
+            self.cur_x = CHESS_BOARD_BLOCK_COUNTS // 2
+            self.cur_y = self.cur_x
+            if CLIENT_ROLE == 0:
+                self.set_last_chess_prompt(self.cur_x,self.cur_y)
+                self.last_put_X = CHESS_BOARD_BLOCK_COUNTS + 10 #not exits
+                self.last_put_Y = CHESS_BOARD_BLOCK_COUNTS + 10
 
             pg.display.update()
     
@@ -494,46 +505,58 @@ if __name__ == "__main__":
             self.soc.settimeout(None)
     
         def set_last_chess_prompt(self, x, y):
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)))
 
-            # |
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)))
+            print "set_last_chess_prompt (", "x:", x, "y:", y, ")"
+            if x <= CHESS_BOARD_BLOCK_COUNTS  and y <= CHESS_BOARD_BLOCK_COUNTS and x >= 0 and y >= 0:
+                
+                self.cur_x = x
+                self.cur_y = y
 
-            # right down
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
-                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8,2,8)))
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                    y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)))
+    
+                # |
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                    y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)))
+    
+                # right down
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
+                    y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8,2,8)))
+    
+                # -
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
+                    y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)))
+                # ----------------------------------------------------
+                # left down 
+                # -
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                    y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2, 8,2)))
+                # |
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
+                    y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8, 2,8)))
+    
+                # right top
+                # -
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
+                    y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)))
+                # |
+                pg.display.update(self.scr.fill(pg.Color('red'),
+                    (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
+                    y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)))
+    
+                self.clear_last_chess_prompt()
 
-            # -
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
-                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2,8,2)))
-            # ----------------------------------------------------
-            # left down 
-            # -
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 2, 8,2)))
-            # |
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left - self.chess_radius - 1, 
-                y*self.block_hight + self.board_margin_top + self.chess_radius + 1 - 8, 2,8)))
-
-            # right top
-            # -
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 8, 
-                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)))
-            # |
-            pg.display.update(self.scr.fill(pg.Color('red'),
-                (x*self.block_width + self.board_margin_left + self.chess_radius + 1 - 2, 
-                y*self.block_hight + self.board_margin_top - self.chess_radius - 1,2,8)))
-
-            if self.last_put_X < CHESS_BOARD_BLOCK_COUNTS + 1 and self.last_put_Y < CHESS_BOARD_BLOCK_COUNTS + 1:
+        def clear_last_chess_prompt(self):
+            print "clear_last_chess_prompt (", "x:", self.last_put_X, "y:", self.last_put_Y, ")"
+            # Clean chess focus
+            if self.last_put_X <= CHESS_BOARD_BLOCK_COUNTS and self.last_put_Y <= CHESS_BOARD_BLOCK_COUNTS and self.last_put_X >= 0 and self.last_put_Y >= 0:
                 # left top
                 r1 = pg.Rect(self.last_put_X*self.block_width + self.board_margin_left - self.chess_radius - 1, 
                         self.last_put_Y*self.block_hight + self.board_margin_top - self.chess_radius - 1,8,2)
@@ -589,7 +612,6 @@ if __name__ == "__main__":
 
             self.last_put_X = x
             self.last_put_Y = y
-            self.last_put_color = color
 
         def setup_btns(self):
             
@@ -744,15 +766,52 @@ if __name__ == "__main__":
 #                    else:
 #                        print ('Unhandled other USER event %s' % str(ev.data))
     
+ 
                 elif self.your_turn == True and ev.type == pg.MOUSEBUTTONUP and ev.button == 1 and not self.won_game == True:
                      x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
-                     if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1:
-                         if self.grid[x][y] == 0:
-                             self.put_pawn(x,y, self.white_image if CLIENT_ROLE else self.black_image)
-                             self.put_chess_to_cloud((x,y))
-                             self.your_turn = False
-                             self.grid[x][y] = 1 if CLIENT_ROLE else 2
-                             #print "### 2 ### grid[x][y]", str(self.grid[x][y])
+                     self.put_my_chess(x, y)
+
+                #elif ev.type == pg.KEYDOWN:
+                elif ev.type == pg.KEYDOWN and KEYBOARD_INPUT == True:
+                     print "### print key press"
+                     if ev.key == pg.K_SPACE:
+                         print "### print space"
+                         if self.your_turn == True and not self.won_game == True:
+                             print "### Pressed space key ###", self.cur_x, self.cur_y 
+                             self.put_my_chess(self.cur_x, self.cur_y)
+                     elif ev.key == pg.K_DOWN:
+                         print "### print down"
+                         if self.your_turn == True and not self.won_game == True:
+                             if self.cur_x <= CHESS_BOARD_BLOCK_COUNTS  and self.cur_y + 1 <= CHESS_BOARD_BLOCK_COUNTS and self.cur_x >= 0 and self.cur_y >= 0:
+                                 self.last_put_X = self.cur_x
+                                 self.last_put_Y = self.cur_y
+                                 self.cur_y += 1
+                                 self.set_last_chess_prompt(self.cur_x,self.cur_y)
+                     elif ev.key == pg.K_UP:
+                         print "### print up"
+                         if self.your_turn == True and not self.won_game == True:
+                             if self.cur_x <= CHESS_BOARD_BLOCK_COUNTS  and self.cur_y <= CHESS_BOARD_BLOCK_COUNTS and self.cur_x >= 0 and self.cur_y - 1 >= 0:
+                                 self.last_put_X = self.cur_x
+                                 self.last_put_Y = self.cur_y
+                                 self.cur_y -= 1
+                                 self.set_last_chess_prompt(self.cur_x,self.cur_y)
+                     elif ev.key == pg.K_RIGHT:
+                         print "### print right"
+                         if self.your_turn == True and not self.won_game == True:
+                             if self.cur_x + 1 <= CHESS_BOARD_BLOCK_COUNTS  and self.cur_y <= CHESS_BOARD_BLOCK_COUNTS and self.cur_x >= 0 and self.cur_y >= 0:
+                                 self.last_put_X = self.cur_x
+                                 self.last_put_Y = self.cur_y
+                                 self.cur_x += 1
+                                 self.set_last_chess_prompt(self.cur_x,self.cur_y)
+                     elif ev.key == pg.K_LEFT:
+                         print "### print left"
+                         if self.your_turn == True and not self.won_game == True:
+                             if self.cur_x <= CHESS_BOARD_BLOCK_COUNTS  and self.cur_y <= CHESS_BOARD_BLOCK_COUNTS and self.cur_x - 1 >= 0 and self.cur_y >= 0:
+                                 self.last_put_X = self.cur_x
+                                 self.last_put_Y = self.cur_y
+                                 self.cur_x -= 1
+                                 self.set_last_chess_prompt(self.cur_x,self.cur_y)
+
                 elif self.your_turn == True and ev.type == pg.MOUSEMOTION:
                      # TODO
                      #if TOUCH_SCREEN == False and self.your_turn == True:
@@ -770,6 +829,14 @@ if __name__ == "__main__":
                                  self.Y = y
                 #else:
                 #    print "#### ev.type:", str(ev.type)
+
+        def put_my_chess(self, x, y):
+            if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1:
+                if self.grid[x][y] == 0:
+                    self.put_pawn(x,y, self.white_image if CLIENT_ROLE else self.black_image)
+                    self.put_chess_to_cloud((x,y))
+                    self.your_turn = False
+                    self.grid[x][y] = 1 if CLIENT_ROLE else 2
 
         def put_chess_to_cloud(self, (x,y)):
             data_name="GMOVE_" + str(self.game_id)
