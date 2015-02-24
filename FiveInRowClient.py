@@ -225,9 +225,13 @@ if __name__ == "__main__":
                 self.your_turn = True 
             else:
                 self.your_turn = False
-           
-            self.T = threading.Thread(target=self.read_from_cloud)
-            self.T.start()
+            # WATCHING MODE
+            self.fetch_data = True
+            if CLIENT_ROLE == 2:
+                self.get_history_from_cloud()
+            if self.fetch_data == True:
+                self.T = threading.Thread(target=self.read_from_cloud)
+                self.T.start()
     
         def draw_user_info(self):
         
@@ -696,6 +700,49 @@ if __name__ == "__main__":
                     #break
             print "## read_from_cloud thread exit"
 
+        def get_history_from_cloud(self):
+            self.his_data = []
+            data_name = "GMOVE_" + str(self.game_id)
+            data_id = self.node.dataId(data_name)
+            datas = self.node.getHistoricalData(data_id, pageSize=1000, sortAscending=True)
+            if len(datas) == 0:
+                print "No game data"
+                self.fetch_data = False
+                self.done = True
+                return
+            for i in range(len(datas)):
+                try:data = json.loads(datas[i])
+                except:
+                    continue
+                if not data['Status'] == 0 and data['Status']:
+                    print("Got %s move "% data['SeqID'], datas[i]);
+                    self.his_data.insert(data['SeqID'],data)
+			#Only last entry to judge if game is over
+            if data['Status'] == 2:
+                self.fetch_data = False
+                #print("Got End @ %s", str(data['SeqID']))
+            self.his_data_len=data['SeqID'];
+            #debug
+            #self.fetch_data = False
+            #Draw current status
+            print("his data total move, %s"%str(data))
+            if self.fetch_data == True:
+                for i in range(1, self.his_data_len+1):
+                    print("Move %d, data" %i, self.his_data[i])
+                    pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':self.his_data[i]}))
+                    self.events()
+            else:
+                pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':self.his_data[1]}))
+                self.his_data_move = 2
+                self.events()
+        def history_next_move(self):
+            print("history_next_move %d" %self.his_data_move)
+            if self.his_data_move <= self.his_data_len:
+                pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':self.his_data[self.his_data_move]}))
+                self.events()
+                self.his_data_move = self.his_data_move + 1
+            else:
+                print("Max move")
         def quit_click(self):
             self.done = True
             
@@ -759,20 +806,23 @@ if __name__ == "__main__":
                          X = ev.data['PosX']
                          Y = ev.data['PosY']
                          self.seq_id = ev.data['SeqID']
-                         self.put_pawn(X, Y, self.black_image if self.turn else self.white_image)
-                         self.your_turn = True                    
+                         self.put_pawn(X, Y, self.black_image if self.seq_id % 2 == 1 else self.white_image)
+                         if not CLIENT_ROLE == 2:
+                             self.your_turn = True                    
                          self.grid[X][Y] = 2 if CLIENT_ROLE else 1
                          #print "### 1 ### grid[X][Y]", str(self.grid[X][Y])
 #                    else:
 #                        print ('Unhandled other USER event %s' % str(ev.data))
-    
- 
-                elif self.your_turn == True and ev.type == pg.MOUSEBUTTONUP and ev.button == 1 and not self.won_game == True:
+                elif self.fetch_data == False and ev.type == pg.MOUSEBUTTONUP  and ev.button == 1:
+                    self.history_next_move()
+                elif self.fetch_data == True and self.your_turn == True and ev.type == pg.MOUSEBUTTONUP and ev.button == 1 and not self.won_game == True:
                      x,y = ev.pos[0]//self.block_width,ev.pos[1]//self.block_hight
                      self.put_my_chess(x, y)
 
                 #elif ev.type == pg.KEYDOWN:
-                elif ev.type == pg.KEYDOWN and KEYBOARD_INPUT == True:
+                elif self.fetch_data == False and ev.type == pg.KEYDOWN and KEYBOARD_INPUT == True:
+                    self.history_next_move()
+                elif self.fetch_data == True and ev.type == pg.KEYDOWN and KEYBOARD_INPUT == True:
                      print "### print key press"
                      if ev.key == pg.K_SPACE:
                          print "### print space"
@@ -853,7 +903,10 @@ if __name__ == "__main__":
             if self.won_game:
                 x = self.right_board_x // 2
                 y = SCREEN_HIGHT // 2
-                if CLIENT_ROLE == self.pawn:
+                if CLIENT_ROLE == 2:
+                    msg = 'Got Winner!'
+                    self.game_over, self.game_over_rect = self.make_text(msg, RED, (x,y), 50)
+                elif CLIENT_ROLE == self.pawn:
                     msg = 'You Won!'
                     self.game_over, self.game_over_rect = self.make_text(msg, RED, (x,y), 50)
                 else:
