@@ -46,8 +46,9 @@ def usage():
 if __name__ == "__main__":
 
     inputfile = ''
+    watch_game = -1
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"hi:",["ifile="])
+        opts, args = getopt.getopt(sys.argv[1:],"hi:g:",["ifile="])
     except getopt.GetoptError as err:
         print str(err) 
         usage()
@@ -59,6 +60,12 @@ if __name__ == "__main__":
             sys.exit()
         elif opt in ("-i", "--ifile"):
             inputfile = arg
+        elif opt == "-g":
+            try:
+                watch_game = int(arg)
+            except:
+                print "Watch game id must be integer ", arg
+                sys.exit(2)
 
     if not os.path.isfile(inputfile):
         print "The file of input doesn't exit"
@@ -128,15 +135,20 @@ if __name__ == "__main__":
             self.seq_id = 0
 
             self.init_for_cloud()
-            r = self.client_register()
-            if not r:
-                print("fails to first player register")
+            
+            if watch_game >=0:
+            	self.role_id = str(2)
+            	self.game_id = str(watch_game)
             else:
-                r = json.loads(r)
-                #print "### r", r
-                #print("First player register: role id %s, game id %s" % (r["roleId"], r["gameId"]))
-                self.game_id = r["gameId"]
-                self.role_id = r["roleId"]
+                r = self.client_register()
+                if not r:
+                    print("fails to first player register")
+                else:
+                    r = json.loads(r)
+                    #print "### r", r
+                    #print("First player register: role id %s, game id %s" % (r["roleId"], r["gameId"]))
+                    self.game_id = r["gameId"]
+                    self.role_id = r["roleId"]
 
     
             self.clock = pg.time.Clock()
@@ -227,7 +239,7 @@ if __name__ == "__main__":
                 self.your_turn = False
             # WATCHING MODE
             self.fetch_data = True
-            if CLIENT_ROLE == 2:
+            if self.role_id == "2":
                 self.get_history_from_cloud()
             if self.fetch_data == True:
                 self.T = threading.Thread(target=self.read_from_cloud)
@@ -654,7 +666,8 @@ if __name__ == "__main__":
                     print "### data : ", data
                     if role_id == '0':
                         competitor_name = data['player2']
-                    elif role_id == '1':
+                    #elif role_id == '1':
+                    else:
                         competitor_name = data['player1']
                     if not competitor_name == '':
                         print "### competitor_name", competitor_name
@@ -688,17 +701,23 @@ if __name__ == "__main__":
                 self.fetch_data = False
                 self.done = True
                 return
-            for i in range(len(datas)):
+            j = 0
+            for i in range(2, len(datas)):
                 print("Raw move ", datas[i]);
                 try:data = json.loads(datas[i])
                 except:
                     continue
                 if data['Status'] > 0 and data['Status']:
-                    print("Got %s move "% data['SeqID'], datas[i]);
-                    j = int(data['SeqID'])
-                    self.his_data.insert(j,data)
-                    #Only last entry to judge if game is over
-            if self.his_data[j]['Status'] == 2:
+                    print("Got " ,data['SeqID'],"move", datas[i]);
+                    j = data['SeqID']
+                    self.his_data.insert(j - 1,data)
+            #Only last entry to judge if game is over
+            if j == 0:
+                print "No game data"
+                self.fetch_data = False
+                self.done = True
+                return
+            if self.his_data[j-1]['Status'] == 2:
                 self.fetch_data = False
                 #print("Got End @ %s", str(data['SeqID']))
             self.his_data_len=j;
@@ -707,13 +726,13 @@ if __name__ == "__main__":
             #Draw current status
             print("his data total %d,move"%self.his_data_len)
             if self.fetch_data == True:
-                for i in range(1, self.his_data_len+1):
+                for i in range(0, self.his_data_len):
                     print('his data %s'%str(self.his_data[i]))
                     pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':self.his_data[i]}))
                     self.events()
             else:
-                pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':self.his_data[1]}))
-                self.his_data_move = 2
+                pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':self.his_data[0]}))
+                self.his_data_move = 1
                 self.events()
         def history_next_move(self):
             print("history_next_move %d" %self.his_data_move)
