@@ -95,6 +95,9 @@ if __name__ == "__main__":
     class Game(tools.States):
         def __init__(self):
 
+            if TOUCH_SCREEN == True:
+                os.putenv('SDL_MOUSEDEV' , '/dev/input/event2')
+            
             pg.init()
 
             self.done = False
@@ -197,21 +200,10 @@ if __name__ == "__main__":
 
             self.draw_user_info()
 
-            #self.put_pawn(0,0, self.black_image)
-            #self.put_pawn(1,1, self.white_image)   
-           
-            #self.put_pawn(0,0, self.black)
-            #self.put_pawn(1,1, self.white)   
-
             pg.display.update()
     
             self.grid = [[0 for x in range(CHESS_BOARD_BLOCK_COUNTS + 1)] for y in range(CHESS_BOARD_BLOCK_COUNTS + 1)]
 
-                # Let server known after chess board shown done?
-#                data = {'clientId':self.clientId, 'action':'show board', 'status':'done'}
-#                try: self.conn.send(json.dumps(data))
-#                except: print('pipe broken')
-            
             ### Your turn: Put down the first chess at the center of the board
             if CLIENT_ROLE == 0:
                 self.your_turn = True 
@@ -594,8 +586,8 @@ if __name__ == "__main__":
                  
         def put_pawn(self,x,y,color):
             print ("### put chess (x: %s, y: %s)" % (x,y))
-            print ("### x pos : %s" % str(x*self.block_width + self.board_margin_left))
-            print ("### x pos : %s" % str(x*self.block_width + self.board_margin_left - self.chess_radius))
+            #print ("### x pos : %s" % str(x*self.block_width + self.board_margin_left))
+            #print ("### x pos : %s" % str(x*self.block_width + self.board_margin_left - self.chess_radius))
             pg.display.update(self.scr.blit(color,
                 (x*self.block_width + self.board_margin_left - self.chess_radius, 
                 y*self.block_hight + self.board_margin_top - self.chess_radius)))
@@ -751,24 +743,8 @@ if __name__ == "__main__":
                          self.seq_id = ev.data['SeqID']
                          self.put_pawn(X, Y, self.black_image if self.turn else self.white_image)
                          self.your_turn = True                    
-#                    #if ev.data['action'] == 'assigned':
-#                    #    self.clientId = ev.data['clientId']
-#                    #    self.clientRole = ev.data['clientRole']
-#
-#                    if ev.data['action'] == "put chess" and ev.data['clientId'] == self.clientId:
-#                        print "Your turn please!"
-#                        self.your_turn = True
-#
-#                    elif ev.data['action'] == "update chess":
-#                        x,y = ev.data['pos']
-#                        if TOUCH_SCREEN == True:
-#                            self.put_pawn(x,y, self.white_image)
-#                        else:
-#                            self.put_pawn(x,y, self.white)
-#                        #self.put_pawn(x,y, 'white')
-#                        self.grid[x][y] = 2 # 2: white
-#                        self.your_turn = True
-#
+                         self.grid[X][Y] = 2 if CLIENT_ROLE else 1
+                         print "### 1 ### grid[X][Y]", str(self.grid[X][Y])
 #                    else:
 #                        print ('Unhandled other USER event %s' % str(ev.data))
     
@@ -781,18 +757,10 @@ if __name__ == "__main__":
                      if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1:
                          if self.grid[x][y] == 0:
                              self.put_pawn(x,y, self.white_image if CLIENT_ROLE else self.black_image)
-
                              self.put_chess_to_cloud((x,y))
                              self.your_turn = False
-                             # TODO     
-## Server
-#                                 self.grid[x][y] = 1 # 1: black
-#                                 print "### 1 ### grid[x][y]", str(self.grid[x][y])
-#                                 data = {'clientId':self.clientId, 'action':'put chess', 'pos':[x, y]}
-#                                 try: self.conn.send(json.dumps(data))
-#                                 except: print('pipe broken')
-
-### Server
+                             self.grid[x][y] = 1 if CLIENT_ROLE else 2
+                             print "### 2 ### grid[x][y]", str(self.grid[x][y])
                 #elif self.your_turn == True and ev.type == pg.MOUSEMOTION:
                 elif ev.type == pg.MOUSEMOTION:
                      # TODO
