@@ -46,9 +46,10 @@ def usage():
 if __name__ == "__main__":
 
     inputfile = ''
+    watch_mode = 0
     watch_game = -1
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"hi:g:",["ifile="])
+        opts, args = getopt.getopt(sys.argv[1:],"hi:g*",["ifile="])
     except getopt.GetoptError as err:
         print str(err) 
         usage()
@@ -61,11 +62,11 @@ if __name__ == "__main__":
         elif opt in ("-i", "--ifile"):
             inputfile = arg
         elif opt == "-g":
+            watch_mode = 1
             try:
                 watch_game = int(arg)
             except:
-                print "Watch game id must be integer ", arg
-                sys.exit(2)
+                print "Find latest game to watch", arg
 
     if not os.path.isfile(inputfile):
         print "The file of input doesn't exit"
@@ -136,9 +137,13 @@ if __name__ == "__main__":
 
             self.init_for_cloud()
             
-            if watch_game >=0:
-            	self.role_id = str(2)
-            	self.game_id = str(watch_game)
+            if watch_mode >0:
+            	self.role_id = "2"
+            	if watch_game >= 0:
+            	    self.game_id = str(watch_game)
+            	else:
+            	    #find lastest game
+            	    self.game_id = str(self.findlatest_game())
             else:
                 r = self.client_register()
                 if not r:
@@ -271,7 +276,7 @@ if __name__ == "__main__":
                 (x1, 
                 5*self.block_hight + self.board_margin_top)))
 
-            text = USER_NAME
+            text = self.user_name
             x1 = self.right_board_x + (SCREEN_WIDTH - self.right_board_x)/2
             self.host_text, self.host_rect = self.make_text(text, YELLOW, 
                 (x1,
@@ -666,9 +671,13 @@ if __name__ == "__main__":
                     print "### data : ", data
                     if role_id == '0':
                         competitor_name = data['player2']
-                    #elif role_id == '1':
-                    else:
+                        self.user_name = USER_NAME
+                    elif role_id == '1':
                         competitor_name = data['player1']
+                        self.user_name = USER_NAME
+                    elif role_id == '2':
+                        self.user_name = data['player1']
+                        competitor_name = data['player2']
                     if not competitor_name == '':
                         print "### competitor_name", competitor_name
                         return competitor_name
@@ -690,7 +699,12 @@ if __name__ == "__main__":
                 except:
                     print("Fail to get data %s" % data_name)
             print "## read_from_cloud thread exit"
-
+        def findlatest_game(self):
+            data_name = "vlv_game_id"
+            data_id = self.node.dataId(data_name)
+            vlv_GAME_S_ID = self.node.getData(data_id)
+            vlv_GAME_ID = int(vlv_GAME_S_ID)
+            return vlv_GAME_ID - 1
         def get_history_from_cloud(self):
             self.his_data = []
             data_name = "vlv_GMOVE_" + str(self.game_id)
@@ -736,7 +750,7 @@ if __name__ == "__main__":
                 self.events()
         def history_next_move(self):
             print("history_next_move %d" %self.his_data_move)
-            if self.his_data_move <= self.his_data_len:
+            if self.his_data_move < self.his_data_len:
                 pg.event.post(pg.event.Event(pg.USEREVENT+1,{'data':self.his_data[self.his_data_move]}))
                 self.events()
                 self.his_data_move = self.his_data_move + 1
@@ -807,7 +821,7 @@ if __name__ == "__main__":
                          Y = ev.data['PosY']
                          self.seq_id = ev.data['SeqID']
                          self.put_pawn(X, Y, self.black_image if self.seq_id % 2 == 1 else self.white_image)
-                         if not CLIENT_ROLE == 2:
+                         if not self.role_id == "2":
                              self.your_turn = True                    
                          self.grid[X][Y] = 2 if CLIENT_ROLE else 1
                          #print "### 1 ### grid[X][Y]", str(self.grid[X][Y])
