@@ -968,7 +968,8 @@ if __name__ == "__main__":
                 #self.clock.tick(60)
 
         def clean(self):
-            self.T.join(1)
+            if self.fetch_data == True:
+                self.T.join(1)
             pg.quit()
             exit()
 
