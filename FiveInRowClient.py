@@ -97,7 +97,6 @@ if __name__ == "__main__":
     CHESS_RADIUS = config['CHESS RADIUS']
          
     USER_NAME = config['USER NAME']
-    #CLIENT_ROLE = config['CLIENT ROLE']
     SHOW_MOUSEMOTION = False
     KEYBOARD_INPUT = config['KEYBOARD INPUT']
 
@@ -155,9 +154,6 @@ if __name__ == "__main__":
                     self.game_id = r["gameId"]
                     self.role_id = r["roleId"]
 
-            #CLIENT_ROLE = int(self.role_id)
-            #print "CLIENT_ROLE:", str(CLIENT_ROLE)
-    
             self.clock = pg.time.Clock()
     
             # load background image
@@ -230,8 +226,6 @@ if __name__ == "__main__":
             # Init chess focus
             self.cur_x = CHESS_BOARD_BLOCK_COUNTS // 2
             self.cur_y = self.cur_x
-            #CLIENT_ROLE = int(self.role_id)
-            #if CLIENT_ROLE == 0:
             if self.role_id == '0':
                 self.set_last_chess_prompt(self.cur_x,self.cur_y)
                 self.last_put_X = CHESS_BOARD_BLOCK_COUNTS + 10 #not exits
@@ -242,7 +236,6 @@ if __name__ == "__main__":
             self.grid = [[0 for x in range(CHESS_BOARD_BLOCK_COUNTS + 1)] for y in range(CHESS_BOARD_BLOCK_COUNTS + 1)]
 
             ### Your turn: Put down the first chess at the center of the board
-            #if CLIENT_ROLE == 0:
             if self.role_id == '0':
                 self.your_turn = True 
             else:
@@ -266,7 +259,6 @@ if __name__ == "__main__":
             # Competitor chess
             x1 = self.right_board_x + (SCREEN_WIDTH - self.right_board_x)/2 - self.chess_radius
 
-            #pg.display.update(self.scr.blit(self.black_image if CLIENT_ROLE else self.white_image,
             pg.display.update(self.scr.blit(self.black_image if self.role_id == '1' else self.white_image,
                 (x1, 
                 1*self.block_hight + self.board_margin_top)))
@@ -279,7 +271,6 @@ if __name__ == "__main__":
 
             # Your chess
             x1 = self.right_board_x + (SCREEN_WIDTH - self.right_board_x)/2 - self.chess_radius
-            #pg.display.update(self.scr.blit(self.white_image if CLIENT_ROLE else self.black_image,
             pg.display.update(self.scr.blit(self.white_image if self.role_id == '1' else self.black_image,
                 (x1, 
                 5*self.block_hight + self.board_margin_top)))
@@ -816,7 +807,6 @@ if __name__ == "__main__":
                          self.show_how_won(start_pos, end_pos)
                          self.won_game = True
 
-                     #if CLIENT_ROLE == self.pawn:
                      if int(self.role_id) == self.pawn:
                       
                          if result == CONTINUE:
@@ -833,7 +823,6 @@ if __name__ == "__main__":
                          self.put_pawn(X, Y, self.black_image if self.seq_id % 2 == 1 else self.white_image)
                          if not self.role_id == "2":
                              self.your_turn = True                    
-                         #self.grid[X][Y] = 2 if CLIENT_ROLE else 1
                          self.grid[X][Y] = 2 if self.role_id == "1" else 1
                          #print "### 1 ### grid[X][Y]", str(self.grid[X][Y])
 #                    else:
@@ -896,7 +885,6 @@ if __name__ == "__main__":
                              if self.grid[self.X][self.Y] == 0:
                                  r = self.easefocus(self.X,self.Y)
                              if self.grid[x][y] == 0:
-                                 #pg.display.update(self.scr.blit(self.white_image if CLIENT_ROLE else self.black_image,
                                  pg.display.update(self.scr.blit(self.white_image if self.role_id == "1" else self.black_image,
                                      (x*self.block_width+self.board_margin_left - self.chess_radius, 
                                      y*self.block_hight + self.board_margin_top - self.chess_radius)))
@@ -909,11 +897,9 @@ if __name__ == "__main__":
         def put_my_chess(self, x, y):
             if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1:
                 if self.grid[x][y] == 0:
-                    #self.put_pawn(x,y, self.white_image if CLIENT_ROLE else self.black_image)
                     self.put_pawn(x,y, self.white_image if self.role_id == "1" else self.black_image)
                     self.put_chess_to_cloud((x,y))
                     self.your_turn = False
-                    #self.grid[x][y] = 1 if CLIENT_ROLE else 2
                     self.grid[x][y] = 1 if self.role_id == "1" else 2
 
         def put_chess_to_cloud(self, (x,y)):
@@ -937,11 +923,9 @@ if __name__ == "__main__":
                 else:
                     msg_font_size = 120
 
-                #if CLIENT_ROLE == 2:
                 if self.role_id == "2":
                     msg = 'Got Winner!'
                     self.game_over, self.game_over_rect = self.make_text(msg, RED, (x,y), msg_font_size)
-                #elif CLIENT_ROLE == self.pawn:
                 elif int(self.role_id) == self.pawn:
                     msg = 'You Won!'
                     self.game_over, self.game_over_rect = self.make_text(msg, RED, (x,y), msg_font_size)
