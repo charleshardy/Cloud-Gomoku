@@ -49,7 +49,7 @@ if __name__ == "__main__":
     watch_mode = 0
     watch_game = -1
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"hi:g*",["ifile="])
+        opts, args = getopt.getopt(sys.argv[1:],"hi:g:",["ifile="])
     except getopt.GetoptError as err:
         print str(err) 
         usage()
