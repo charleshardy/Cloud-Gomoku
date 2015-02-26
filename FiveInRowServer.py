@@ -141,4 +141,6 @@ while True:
 
                 print "========vlv_GAME_ID="+str(vlv_GAME_ID)
                 vlv_GAME_ID += 1
+        else:
+            vlv_GAME_ID = vlv_GAME_NEW_ID            
 
