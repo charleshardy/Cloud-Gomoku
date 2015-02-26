@@ -1,5 +1,4 @@
-This game was designed for two competitors online based on the cloud. 
-
+This game was designed for two competitors online over a cloud.
 
 - How to play and watch game?
 
@@ -9,8 +8,12 @@ Galileo board with a touch screen.  Other persons can watch the game
 that player 1 and player 2 on live. Also the histories of a game can 
 be played back in watching mode (by passing a game id). 
 
-# Game 1
+It is allowed to establish multiple games and watchers for playing back
+or watching running games simultaneously.
 
+Note that a game server must be launched first prior to playing a game.
+
+- Steps
 Player1:
 FiveInRowClient.py -i config.json_pc
 
@@ -18,12 +21,11 @@ Player2:
 FiveInRowClient.py -i config.json_touch
 
 Watcher(s):
-FiveInRowClient.py -i config.json_pc -g 1
-
+FiveInRowClient.py -i config.json_pc -g <game_id>
 
 NOTES: 
 A configuration file has to be used for the game client to get the 
-player‘s name, screen width and high, and input method, etc., at this 
+player's name, screen width and high, and input method, etc., at this 
 version of the game. 
 
 For more usage please refer to “FiveInRowClient.py -h”.
