@@ -40,8 +40,24 @@ ERROR = 3
 cloud_service = "Mashery"
 
 def usage():
-    print 'Usage: ' + sys.argv[0] + ' -i <inputfile>'
-    print '  Example: ' + sys.argv[0] + ' -i config.json_pc'
+
+    USAGE = """\
+
+Usage: %s <-i config_file> [options]
+
+  -i, --ifile=     Input the config file, which contains player user name, 
+                   screen width and hight, and input method, etc. 
+Options:
+  -h, --help       Show this message
+  -g, --gameid=    Enter into watching mode and watch the game of [gameid]
+                   
+Examples:
+  %s -i config.json_pc 
+  %s -i config.json_touch
+  %s -i config.json_watch -g 1
+"""
+    print (USAGE % ((os.path.basename(__file__),) * 4))
+
 
 if __name__ == "__main__":
 
@@ -49,28 +65,32 @@ if __name__ == "__main__":
     watch_mode = 0
     watch_game = -1
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"hi:g:",["ifile="])
+        opts, args = getopt.getopt(sys.argv[1:],"hi:g:",["help","ifile=", "gameid="])
     except getopt.GetoptError as err:
         print str(err) 
         usage()
         sys.exit(2)
 
     for opt, arg in opts:
-        if opt == '-h':
+        if opt in ("-h", "--help"):
             usage()
             sys.exit()
-        elif opt in ("-i", "--ifile"):
+        elif opt in ("-i", "--ifile="):
             inputfile = arg
-        elif opt == "-g":
+        elif opt in ("-g", "--gameid="):
             watch_mode = 1
             try:
                 watch_game = int(arg)
             except:
                 print "Find latest game to watch", arg
 
-    if not os.path.isfile(inputfile):
-        print "The file of input doesn't exit"
+    if inputfile == '':
+        usage()
         sys.exit(2)
+    else:
+        if not os.path.isfile(inputfile):
+            print "The file of input doesn't exit"
+            sys.exit(2)
 
     #config = {'CHESS BOARD BLOCK COUNTS': 10, 'SCREEN WIDTH': 320, 'SCREEN HIGHT': 240, 
     #    'USER NAME': 'Charles', 'TOUCH SCREEN': True, 
