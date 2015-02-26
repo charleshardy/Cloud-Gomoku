@@ -1,5 +1,37 @@
 This game was designed for two competitors online over a cloud.
 
+- Preparation
+This game depends on two python modules: pygame and requests.
+If you are running Ubuntu Linux, type the following commands
+to install them:
+
+$ sudo apt-get install python-pygame python-requests
+
+NOTE:
+Either manually installing requests or python-requests may
+need a bug fix in requests module before running the game.
+
+If you right get the issue below when lanunching the game,
+
+Traceback (most recent call last):
+  File "./FiveInRowClient.py", line 996, in <module>
+    app = Game()
+  File "./FiveInRowClient.py", line 167, in __init__
+    r = self.client_register()
+  File "./FiveInRowClient.py", line 349, in client_register
+    r = scripto.execute('vlvRegistration', data)
+  File "/home/test/test/Cloud-Gomoku/mashery_api.py", line 76, in execute
+    r = self.postRequest(url, headers, data)
+  File "/home/test/test/Cloud-Gomoku/cloud.py", line 28, in postRequest
+    return utils.post(url, headers, data, ssl = self.ssl)
+  File "/home/test/test/Cloud-Gomoku/utils.py", line 51, in post
+    r = requests.post(url, headers = headers, data = payload, verify = ssl)
+  File "/usr/lib/python2.7/dist-packages/requests/api.py", line 111, in post
+    return request('post', url, data=data, **kwargs)
+TypeError: request() got an unexpected keyword argument 'verify'
+
+just apply the patch at patch/requests-fix-matching-special-URL-for-SSL-certificate.patch
+
 - How to play and watch game?
 
 For an example here, the first player starts a game client on a PC, 
