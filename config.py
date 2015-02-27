@@ -16,15 +16,11 @@ cloud_configs = {
 		"name": "windriver.axeda.com",
 		"username": "windriver-es2015-team4",
 		"password": "emseng1A",
-		#"username": "admin",
-		#"password": "windEMS11",
-		#"username": "windriver",
-		#"password": "windEMS11",
 		"asset": "valvrave-pma1",
 		"model": "es2015-Galileo-Gen2",
 		"timeout": 3000,
 		"ssl": None,
-		"debug": True,
+		"debug": False,
 	},
 	# Settings for Mashery API manager
 	"Mashery": {
@@ -40,7 +36,7 @@ cloud_configs = {
 		# urllib3\connectionpool.py:734: InsecureRequestWarning: Unverified
 		# HTTPS request is being made. Adding certificate verification is strongly
 		# advised. See: https://urllib3.readthedocs.org/en/latest/security.html
-		"ssl": False,
-		"debug": True,
+		"ssl": True,
+		"debug": False,
 	},
 }
