@@ -1,0 +1,44 @@
+[PATCH] requests: fix matching special URL for SSL certificate
+
+A URL, like a.b.domain.com, with multiple prefix names, cannot match
+SSL certificate's URL with wildcard. This fix resolves this issue
+and enables a single wildcard can match multiple prefix names.
+
+Signed-off-by: Lans Zhang <jia.zhang@windriver.com>
+---
+ .../packages/ssl_match_hostname/_implementation.py |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/requests/packages/urllib3/packages/ssl_match_hostname/_implementation.py b/requests/packages/urllib3/packages/ssl_match_hostname/_implementation.py
+index 52f4287..e7f9aff 100644
+--- a/requests/packages/urllib3/packages/ssl_match_hostname/_implementation.py
++++ b/requests/packages/urllib3/packages/ssl_match_hostname/_implementation.py
+@@ -17,6 +17,7 @@ def _dnsname_match(dn, hostname, max_wildcards=1):
+     http://tools.ietf.org/html/rfc6125#section-6.4.3
+     """
+     pats = []
++    suffix = r''
+     if not dn:
+         return False
+ 
+@@ -46,6 +47,8 @@ def _dnsname_match(dn, hostname, max_wildcards=1):
+         # When '*' is a fragment by itself, it matches a non-empty dotless
+         # fragment.
+         pats.append('[^.]+')
++        for frag in remainder:
++           suffix += r'.' + frag 
+     elif leftmost.startswith('xn--') or hostname.startswith('xn--'):
+         # RFC 6125, section 6.4.3, subitem 3.
+         # The client SHOULD NOT attempt to match a presented identifier
+@@ -61,6 +64,8 @@ def _dnsname_match(dn, hostname, max_wildcards=1):
+         pats.append(re.escape(frag))
+ 
+     pat = re.compile(r'\A' + r'\.'.join(pats) + r'\Z', re.IGNORECASE)
++    if suffix:
++       hostname = hostname.split(suffix)[0].split(r'.')[-1] + suffix 
+     return pat.match(hostname)
+ 
+ 
+-- 
+1.7.1
+
