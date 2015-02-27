@@ -3,9 +3,7 @@
 """This program is a five in row game, which is used for the coding
 camp 2015 in WindRiver.com"""
 
-from pygame import *
-time.Clock()
-
+import string
 import threading
 import json
 
