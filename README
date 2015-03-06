@@ -2,10 +2,17 @@ This game was designed for two competitors online over a cloud.
 
 - Preparation
 This game depends on two python modules: pygame and requests.
+
+* Linux
 If you are running Ubuntu Linux, type the following commands
 to install them:
 
 $ sudo apt-get install python-pygame python-requests
+
+* Windows
+Install pygame-1.9.1.win32-py2.7.msi from pygame official site.
+To install requests, extract the tarball and run
+"python setup.py install"
 
 NOTE:
 Either manually installing requests or python-requests may
