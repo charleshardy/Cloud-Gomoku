@@ -365,6 +365,32 @@ if __name__ == "__main__":
                 x2 = self.board_margin_left + i * self.block_width
                 y2 = self.board_margin_top + n * self.block_width
                 pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+            
+            # Reference points
+            if TOUCH_SCREEN == True:
+                radius = 3
+            else: 
+                radius = 6
+
+            ## left top
+            x1 = self.board_margin_left + 2 * self.block_width
+            y1 = self.board_margin_top + 2 * self.block_width
+            pg.draw.circle(self.scr, GRID_LINE, (x1, y1), radius, 0)
+
+            ## right top 
+            x1 = self.board_margin_left + (n - 2) * self.block_width
+            y1 = self.board_margin_top + 2 * self.block_width
+            pg.draw.circle(self.scr, GRID_LINE, (x1, y1), radius, 0)
+
+            ## left bottom
+            x1 = self.board_margin_left + 2 * self.block_width
+            y1 = self.board_margin_top + (n - 2) * self.block_width
+            pg.draw.circle(self.scr, GRID_LINE, (x1, y1), radius, 0)
+
+            ## right bottom
+            x1 = self.board_margin_left + (n - 2) * self.block_width
+            y1 = self.board_margin_top + (n - 2) * self.block_width
+            pg.draw.circle(self.scr, GRID_LINE, (x1, y1), radius, 0)
 
         def patch_grid(self, n, x, y):
             self.patch_grid_x0_xn(n, x, y)
