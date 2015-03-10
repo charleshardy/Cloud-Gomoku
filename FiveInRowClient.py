@@ -119,6 +119,8 @@ if __name__ == "__main__":
     USER_NAME = config['USER NAME']
     SHOW_MOUSEMOTION = False
     KEYBOARD_INPUT = config['KEYBOARD INPUT']
+    USER_NAME_TEXT_COLOR = config['USER NAME TEXT COLOR']
+    BOARD_GRID_LINE_COLOR = config['BOARD GRID LINE COLOR']
 
     class Game(tools.States):
         def __init__(self):
@@ -285,7 +287,7 @@ if __name__ == "__main__":
 
             x1 = self.right_board_x + (SCREEN_WIDTH - self.right_board_x)/2
             text = self.competitor_name
-            self.guest_text, self.guest_rect = self.make_text(text, YELLOW, 
+            self.guest_text, self.guest_rect = self.make_text(text, USER_NAME_TEXT_COLOR, 
                 (x1,
                 1*self.block_hight + self.board_margin_top - self.chess_radius), name_font_size)
 
@@ -297,7 +299,7 @@ if __name__ == "__main__":
 
             text = self.user_name
             x1 = self.right_board_x + (SCREEN_WIDTH - self.right_board_x)/2
-            self.host_text, self.host_rect = self.make_text(text, YELLOW, 
+            self.host_text, self.host_rect = self.make_text(text, USER_NAME_TEXT_COLOR, 
                 (x1,
                 5*self.block_hight + self.board_margin_top - self.chess_radius), name_font_size)
 
@@ -357,14 +359,14 @@ if __name__ == "__main__":
                 y1 = self.board_margin_top + i * self.block_width
                 x2 = self.board_margin_left + n * self.block_width
                 y2 = self.board_margin_top + i * self.block_width
-                pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
 
                 # Columns
                 x1 = self.board_margin_left + i * self.block_width
                 y1 = self.board_margin_top
                 x2 = self.board_margin_left + i * self.block_width
                 y2 = self.board_margin_top + n * self.block_width
-                pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
             
             # Reference points
             if TOUCH_SCREEN == True:
@@ -375,22 +377,22 @@ if __name__ == "__main__":
             ## left top
             x1 = self.board_margin_left + 2 * self.block_width
             y1 = self.board_margin_top + 2 * self.block_width
-            pg.draw.circle(self.scr, GRID_LINE, (x1, y1), radius, 0)
+            pg.draw.circle(self.scr, BOARD_GRID_LINE_COLOR, (x1, y1), radius, 0)
 
             ## right top 
             x1 = self.board_margin_left + (n - 2) * self.block_width
             y1 = self.board_margin_top + 2 * self.block_width
-            pg.draw.circle(self.scr, GRID_LINE, (x1, y1), radius, 0)
+            pg.draw.circle(self.scr, BOARD_GRID_LINE_COLOR, (x1, y1), radius, 0)
 
             ## left bottom
             x1 = self.board_margin_left + 2 * self.block_width
             y1 = self.board_margin_top + (n - 2) * self.block_width
-            pg.draw.circle(self.scr, GRID_LINE, (x1, y1), radius, 0)
+            pg.draw.circle(self.scr, BOARD_GRID_LINE_COLOR, (x1, y1), radius, 0)
 
             ## right bottom
             x1 = self.board_margin_left + (n - 2) * self.block_width
             y1 = self.board_margin_top + (n - 2) * self.block_width
-            pg.draw.circle(self.scr, GRID_LINE, (x1, y1), radius, 0)
+            pg.draw.circle(self.scr, BOARD_GRID_LINE_COLOR, (x1, y1), radius, 0)
 
         def patch_grid(self, n, x, y):
             self.patch_grid_x0_xn(n, x, y)
@@ -406,37 +408,37 @@ if __name__ == "__main__":
                     # Rows
                     x2 = self.board_margin_left + self.chess_radius
                     y2 = self.board_margin_top
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
     
                     # Columns
                     x2 = self.board_margin_left
                     y2 = self.board_margin_top + self.chess_radius
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
                 elif y == n:
                     # Rows
                     y1 = self.board_margin_top + (y * self.block_width)
                     x2 = self.board_margin_left + self.chess_radius
                     y2 = self.board_margin_top + (y * self.block_width)
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
     
                     # Columns
                     y1 = self.board_margin_top + (y * self.block_width - self.chess_radius)
                     x2 = self.board_margin_left
                     y2 = self.board_margin_top + (y * self.block_width)
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
 
                 else:
                     # Rows
                     y1 = self.board_margin_top + (y * self.block_width)
                     x2 = self.board_margin_left + self.chess_radius
                     y2 = self.board_margin_top + (y * self.block_width)
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
     
                     # Columns
                     y1 = self.board_margin_top + (y * self.block_width - self.chess_radius)
                     x2 = self.board_margin_left
                     y2 = self.board_margin_top + (y * self.block_width + self.chess_radius)
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
             elif x == n:
                 x1 = self.board_margin_left + (x * self.block_width)
                 if y == 0:
@@ -444,37 +446,37 @@ if __name__ == "__main__":
                     # Rows
                     x2 = self.board_margin_left + (x * self.block_width) - self.chess_radius
                     y2 = self.board_margin_top
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
     
                     # Columns
                     x2 = self.board_margin_left + (x * self.block_width)
                     y2 = self.board_margin_top + self.chess_radius
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
                 elif y == n:
                     # Rows
                     y1 = self.board_margin_top + (y * self.block_width)
                     x2 = self.board_margin_left + (x * self.block_width) - self.chess_radius
                     y2 = self.board_margin_top + (y * self.block_width)
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
     
                     # Columns
                     y1 = self.board_margin_top + (y * self.block_width - self.chess_radius)
                     x2 = self.board_margin_left + (x * self.block_width)
                     y2 = self.board_margin_top + (y * self.block_width)
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
 
                 else:
                     # Rows
                     y1 = self.board_margin_top + (y * self.block_width)
                     x2 = self.board_margin_left + (x * self.block_width) - self.chess_radius
                     y2 = self.board_margin_top + (y * self.block_width)
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
     
                     # Columns
                     y1 = self.board_margin_top + (y * self.block_width - self.chess_radius)
                     x2 = self.board_margin_left + (x * self.block_width)
                     y2 = self.board_margin_top + (y * self.block_width + self.chess_radius)
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
 
         def patch_grid_y0_yn(self, n, x, y):
             if y == 0:
@@ -485,13 +487,13 @@ if __name__ == "__main__":
                     # Rows
                     x2 = self.board_margin_left + (x * self.block_width) + self.chess_radius
                     y2 = self.board_margin_top
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
        
                     # Columns
                     x1 = self.board_margin_left + (x * self.block_width)
                     x2 = self.board_margin_left + (x * self.block_width)
                     y2 = self.board_margin_top + self.chess_radius
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
             elif y == n:
                 if not x == 0 and not x == n:
                     y1 = self.board_margin_top + (y * self.block_width)
@@ -500,13 +502,13 @@ if __name__ == "__main__":
                     # Rows
                     x2 = self.board_margin_left + (x * self.block_width) + self.chess_radius
                     y2 = y1
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
        
                     # Columns
                     x1 = self.board_margin_left + (x * self.block_width)
                     x2 = x1
                     y2 = y1 - self.chess_radius
-                    pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                    pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
 
         def patch_grid_inner(self, n, x, y):
             if x > 0 and x < n and y > 0 and y < n:
@@ -517,7 +519,7 @@ if __name__ == "__main__":
                 x2 = self.board_margin_left + (x * self.block_width) + self.chess_radius
                 y2 = y1
     
-                pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
                 
                 # Columns
                 x1 = self.board_margin_left + (x * self.block_width)
@@ -525,7 +527,7 @@ if __name__ == "__main__":
                 
                 y1 = self.board_margin_top + (y * self.block_width) - self.chess_radius
                 y2 = self.board_margin_top + (y * self.block_width) + self.chess_radius
-                pg.draw.line(self.scr, GRID_LINE, (x1,y1), (x2,y2), self.grid_width)
+                pg.draw.line(self.scr, BOARD_GRID_LINE_COLOR, (x1,y1), (x2,y2), self.grid_width)
 
         def init_client_conn_socket(self):
             self.soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
