@@ -142,7 +142,7 @@ if __name__ == "__main__":
                 waiting_font_size = 12
             else: 
                 waiting_font_size = 20
-            text = "Waiting for cloud server ..."
+            text = "Connecting cloud server ..."
             self.waiting_text, self.waiting_rect = self.make_text(text, GREEN, 
                 (SCREEN_WIDTH // 2 , 
                 SCREEN_HIGHT // 2), waiting_font_size)
