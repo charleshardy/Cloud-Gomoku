@@ -25,6 +25,8 @@ class Node():
 			print("cloud is not configured")
 			assert(False)
 
+		self.name_mapping = {}
+
 	def dataId(self, name):
 		"""
 		@id: data item name
@@ -32,6 +34,24 @@ class Node():
 		Return: string or None
 		"""
 		return name
+
+	def dataSystemId(self, name):
+		if name in self.name_mapping:
+			return self.name_mapping[name]
+
+		dataItem = self.cloud.dataItem()
+		s = TypeDataItemCriteria(**{
+			"name": name,
+			"types": ["STRING"],
+		}).getValue()
+		r = dataItem.findOne(**s)
+		if not r:
+			print("dataId: not found the data item %s" % name)
+			return None
+
+		id = r["systemId"]
+		self.name_mapping[name] = id
+		return id
 
 	def setData(self, id, value):
 		"""
@@ -47,6 +67,8 @@ class Node():
 		})
 
 		if r:
+			if self.cloud.isDebug():
+				print("setData: %s" % r)
 			return json.loads(r).get("msg") == "success"
 		else:
 			return False
@@ -63,11 +85,54 @@ class Node():
 		})
 
 		if r:
+			if self.cloud.isDebug():
+				print("getData: %s" % r)
+
 			r = json.loads(r)
 			if r.get("msg") == "success":
 				return r.get("val")
 
 		return None
+
+	def deleteData(self, name):
+		"""
+		@name: data item name
+
+		Return: string or None
+		"""
+		dataItem = self.cloud.dataItem()
+		s = TypeDataItemCriteria(**{
+			"name": name,
+			"types": ["STRING"],
+		}).getValue()
+		r = dataItem.findOne(**s)
+		if not r:
+			print("deleteData: not found the data item %s" % name)
+			return None
+
+		r = dataItem.delete(r["systemId"])
+		if not r:
+			print("deleteData: fail to delete data item %s" % name)
+			return None
+
+		return r
+
+	def deleteDatas(self, name_pattern):
+		dataItem = self.cloud.dataItem()
+		s = TypeDataItemCriteria(**{
+			"name": name_pattern,
+			"types": ["STRING"],
+		}).getValue()
+		r = dataItem.find(**s)
+		if not r:
+			print("deleteDatas: not found the data item %s" % name_pattern)
+
+		for d in r["dataItems"]:
+			j = dataItem.delete(d["systemId"])
+			if not j:
+				print("deleteDatas: fail to delete data items %s" % name_pattern)
+				return None
+			print("deleteDatas: %s deleted" % d["name"])
 
 	def getHistoricalData(self, name, **p):
 		"""
@@ -75,7 +140,7 @@ class Node():
 		@p:
 		- assetId: system id assigned to the asset
 		- dataItemIds: list of system id assigned to the data items
-		
+
 		Return: string list or None
 		"""
 		asset_id = p.get("assetId")
@@ -102,8 +167,31 @@ class Node():
 
 			asset_id = r['systemId']
 
+		if not p.get("dataItemIds"):
+			# Search dataitem id
+			dataItem = self.cloud.dataItem()
+			s = TypeDataItemCriteria(**{
+				"name": name,
+				#"modelId": p.get("modelId"),
+				"types": ["STRING"],
+				#"readOnly": p.get("readOnly"),
+				#"visible": p.get("visible"),
+				#"historicalOnly": p.get("historicalOnly"),
+			}).getValue()
+			r = dataItem.findOne(**s)
+			if not r:
+				print("Not found the data item id for %s (asset: %s, model: %s)" % (name, self.cloud["asset"], self.cloud["model"]))
+				return None
+
+			dataItemIds = [r["systemId"]]
+		else:
+			dataItemIds = p["dataItemIds"]
+
+		if self.cloud.isDebug():
+			print "asset id: ", asset_id
+
 		s = TypeAbstractSearchCriteria(p.get("pageSize"), p.get("pageNumber"), p.get("sortAscending"), p.get("sortPropertyName")).getValue()
-		c = TypeHistoricalDataItemValueCriteria(asset_id, p.get("dataItemIds"), p.get("startDate"), p.get("endDate")).getValue()
+		c = TypeHistoricalDataItemValueCriteria(asset_id, dataItemIds, p.get("startDate"), p.get("endDate")).getValue()
 		s.update(c)
 
 		dataitem = self.cloud.dataItem()
@@ -115,13 +203,8 @@ class Node():
 		# Find if the server variables were created.
 		for dataItemValue in r["dataItemValues"]:
 			dataItem = dataItemValue["dataItem"]
-			#print("[%s] Data \"%s\" = %s, type %s" % (dataItem["systemId"], dataItem["name"], dataItemValue["value"], dataItem["type"]))
-			if name != dataItem["name"]:
-				continue
-			#print("Data id %d, value %s" % (int(dataItem["systemId"]), dataItemValue["value"]))
+			if self.cloud.isDebug():
+				print("[%s] Data \"%s\" = %s, timestamp %s" % (dataItem["systemId"], dataItem["name"], dataItemValue["value"], dataItemValue["timestamp"]))
 			values.append(dataItemValue["value"])
-
-		if self.cloud.isDebug():
-			print values
 
 		return values
