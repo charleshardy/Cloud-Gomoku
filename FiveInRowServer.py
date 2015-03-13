@@ -6,6 +6,7 @@ camp 2015 in WindRiver.com"""
 import string
 import threading
 import json
+import sys
 
 from node import Node
 from config import cloud_configs
@@ -124,7 +125,12 @@ cloud_name = "Mashery"
 node = Node(cloud_name, cloud_configs[cloud_name])
 data_id = node.dataId(data_name)
 
-vlv_GAME_ID = string.atoi(node.getData(data_id))
+game_id = node.getData(data_id)
+if game_id is None:
+    print("Unable to get the initial game id")
+    sys.exit(-1)
+
+vlv_GAME_ID = string.atoi(game_id)
 
 while True:
     vlv_GAME_S_ID = node.getData(data_id)

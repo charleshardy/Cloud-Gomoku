@@ -516,7 +516,7 @@ class Scripto(Axeda):
 		headers = self.setHeaders(json = False)
 
 		r = self.getRequest(url, headers, data)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return r.content
 		else:
 			return None
@@ -548,7 +548,7 @@ class Asset(Axeda):
 <serialNumber>''' + serial_number + '''</serialNumber></AssetCriteria>'''
 
 		r = self.postRequest(url, headers, payload)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -577,7 +577,7 @@ class Asset(Axeda):
 				'''<v2:AssetCriteria sortAscending="true" sortPropertyName="name" xmlns:v2="http://www.axeda.com/services/v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><v2:modelNumber>''' + c["modelNumber"] + '''</v2:modelNumber><v2:serialNumber>''' + c["serialNumber"] + '''</v2:serialNumber></v2:AssetCriteria>'''
 
 		r = self.postRequest(url, headers, payload)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -609,7 +609,7 @@ class Asset(Axeda):
 
 			r = self.postRequest('findByIds', headers, payload)
 
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return r.content
 		else:
 			return None
@@ -658,7 +658,7 @@ class DataItem(Axeda):
 </v2:DataItem>'''
 
 		r = self.putRequest(url, headers, payload)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -713,7 +713,7 @@ class DataItem(Axeda):
 </v2:DataItem>'''
 
 		r = self.postRequest(url, headers, payload)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -750,7 +750,7 @@ class DataItem(Axeda):
 </v2:DataItem>'''
 
 		r = self.postRequest(url, headers, payload)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return r.content
 		else:
 			return None
@@ -766,7 +766,7 @@ class DataItem(Axeda):
 		headers = self.setHeaders(json = False)
 
 		r = self.deleteRequest(url, headers)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			#return TypeExecutionResult(json.loads(r.content))
 			return json.loads(r.content)
 		else:
@@ -799,7 +799,7 @@ class DataItem(Axeda):
 			payload = None
 
 		r = self.postRequest(url, headers, payload)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -823,7 +823,7 @@ class DataItem(Axeda):
 			payload = None
 
 		r = self.postRequest(url, headers, payload)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -857,8 +857,7 @@ class DataItem(Axeda):
 			payload += '</IdCollection>'
 
 		r = self.postRequest(url, headers, payload)
-
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -876,8 +875,7 @@ class DataItem(Axeda):
 		headers = self.setHeaders(json = False)
 
 		r = self.getRequest(url, headers)
-
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -898,8 +896,7 @@ class DataItem(Axeda):
 		headers = self.setHeaders(json = False)
 
 		r = self.getRequest(url, headers)
-
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -927,7 +924,7 @@ class DataItem(Axeda):
 <v2:assetId>''' + str(criteria['asset_id']) + '''</v2:assetId></v2:CurrentDataItemValueCriteria>'''
 
 		r = self.postRequest(url, headers, payload)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -943,8 +940,7 @@ class DataItem(Axeda):
 		headers = self.setHeaders(json = False)
 
 		r = self.getRequest(url, headers)
-
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -960,8 +956,7 @@ class DataItem(Axeda):
 		headers = self.setHeaders(json = False)
 	
 		r = self.getRequest(url, headers)
-
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -982,7 +977,7 @@ class DataItem(Axeda):
 <v2:assetId>''' + str(criteria['asset_id']) + '''</v2:assetId></v2:CurrentDataItemValueCriteria>'''
 
 		r = self.postRequest(url, headers, payload)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
@@ -1024,7 +1019,7 @@ class DataItem(Axeda):
 </dataItem></DataItemCollection>'''
 
 		r = self.putRequest(url, headers, payload)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return json.loads(r.content)
 		else:
 			return None
