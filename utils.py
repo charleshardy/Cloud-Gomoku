@@ -26,10 +26,13 @@ def get(url, headers, payload = None, ssl = False):
 		print("  Headers: %s" % headers)
 		print("  SSL: %s" % repr(ssl))
 
-	if not url.startswith("https"):
-		r = requests.get(url, headers = headers)
-	else:
-		r = requests.get(url, headers = headers, verify = ssl)
+	try:
+		if not url.startswith("https"):
+			r = requests.get(url, headers = headers)
+		else:
+			r = requests.get(url, headers = headers, verify = ssl)
+	except:
+		return None
 
 	if debug:
 		print("  Status: %s" % r.status_code)
@@ -45,10 +48,13 @@ def post(url, headers, payload, ssl = None):
 		print("  Payload: %s" % payload)
 		print("  SSL: %s" % repr(ssl))
 
-	if not url.startswith("https"):
-		r = requests.post(url, headers = headers, data = payload)
-	else:
-		r = requests.post(url, headers = headers, data = payload, verify = ssl)
+	try:
+		if not url.startswith("https"):
+			r = requests.post(url, headers = headers, data = payload)
+		else:
+			r = requests.post(url, headers = headers, data = payload, verify = ssl)
+	except:
+		return None
 
 	if debug:
 		print("  Status: %s" % r.status_code)
@@ -64,10 +70,13 @@ def put(url, headers, payload, ssl = None):
 		print("  Content: %s" % payload)
 		print("  SSL: %s" % repr(ssl))
 
-	if not url.startswith("https"):
-		r = requests.put(url, headers = headers, data = payload)
-	else:
-		r = requests.put(url, headers = headers, data = payload, verify = ssl)
+	try:
+		if not url.startswith("https"):
+			r = requests.put(url, headers = headers, data = payload)
+		else:
+			r = requests.put(url, headers = headers, data = payload, verify = ssl)
+	except:
+		return None
 
 	if debug:
 		print("  Status: %s" % r.status_code)
@@ -82,10 +91,13 @@ def delete(url, headers, ssl = False):
 		print("  Headers: %s" % headers)
 		print("  SSL: %s" % repr(ssl))
 
-	if not url.startswith("https"):
-		r = requests.delete(url, headers = headers)
-	else:
-		r = requests.delete(url, headers = headers, verify = ssl)
+	try:
+		if not url.startswith("https"):
+			r = requests.delete(url, headers = headers)
+		else:
+			r = requests.delete(url, headers = headers, verify = ssl)
+	except:
+		return None
 
 	if debug:
 		print("  Status: %s" % r.status_code)

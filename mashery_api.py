@@ -74,7 +74,7 @@ class Scripto(Mashery, axeda_api.Scripto):
 		headers = self.setHeaders(json = False)
 
 		r = self.postRequest(url, headers, data)
-		if r.status_code == 200:
+		if r is not None and r.status_code == 200:
 			return r.content
 		else:
 			return None
