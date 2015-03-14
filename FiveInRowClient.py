@@ -12,8 +12,8 @@ from toolbox import button
 from toolbox import tools
 
 # Cloud API
-from node import Node
-from config import *
+from CloudAPI.node import Node
+from CloudAPI.config import *
 
 #                 R    G    B
 GRAY          = (100, 100, 100)
