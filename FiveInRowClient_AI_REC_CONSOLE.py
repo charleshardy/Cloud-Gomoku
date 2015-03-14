@@ -181,7 +181,7 @@ if __name__ == "__main__":
             return x,y
          
         def AI_put(self, last_x, last_y, who_put):
-            DEPTH=3
+            DEPTH=1
             s = searcher.searcher()
             s.board = self.grid
             print 'Intel Galileo is thinking now...'
@@ -250,6 +250,7 @@ if __name__ == "__main__":
                                 self.is_game_over(x1,y1,2)
                         elif color == 1: # white - real put 
                             if self.grid[x][y] == 0:
+                                print "Why didn't you put the chess as I suggested?"
                                 self.put_human_chess(x, y, 2) # self.role_id:0/put chess value is 1/black
                                 self.is_game_over(x,y,2) 
                                 #Waiting for next put from the camera

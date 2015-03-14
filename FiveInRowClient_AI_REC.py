@@ -183,6 +183,9 @@ if __name__ == "__main__":
             self.game_id = '0001'
             self.role_id = '0' # You're first starter (black chess)
 
+            # Show GUI or Console
+            self.GUI = False
+
             self.clock = pg.time.Clock()
     
             # load background image
