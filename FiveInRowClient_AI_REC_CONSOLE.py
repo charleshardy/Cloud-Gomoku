@@ -99,12 +99,14 @@ if __name__ == "__main__":
                     self.your_turn = False
 
         def is_game_over(self, x, y, who_put):
-            print "##################### who_put: ", str(who_put)
+            print "###################### who_put: ", str(who_put)
+            print "0 1 2 3 4 5 6 7 8 9 10"
+            print "######################"
             for iy in range(0, CHESS_BOARD_BLOCK_COUNTS + 1):
                 for ix in range(0, CHESS_BOARD_BLOCK_COUNTS + 1):
                     print '{:1}'.format(str(self.grid[ix][iy])),
                 print
-            print "#####################"
+            print "######################"
 
             return self.is_winner(x,y, who_put)
 
@@ -166,7 +168,7 @@ if __name__ == "__main__":
                 self.pawn = who_put - 1
                 #print "----------------winnerspawns="+str(winnerspawns)
                 start_pos, end_pos = winnerspawns
-                self.show_how_won(start_pos, end_pos)
+                #self.show_how_won(start_pos, end_pos)
                 self.won_game = True
                 return True # WIN/LOST
             else:
@@ -176,7 +178,7 @@ if __name__ == "__main__":
             x,y = self.AI_put(last_x, last_y, who_put)
             if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1:
                 if self.grid[x][y] == 0:
-                    self.grid[x][y] = who_put # 2
+                    #self.grid[x][y] = who_put # 2
                     self.your_turn = True
             return x,y
          
@@ -189,16 +191,6 @@ if __name__ == "__main__":
             score, row, col = s.search(who_put, DEPTH)
             print 'Intel Galileo moves to (%d,%d) (score:%d)'%(row, col, score)
             return (row,col)
-
-        def put_chess_to_cloud(self, (x,y)):
-            data_name="vlv_GMOVE_" + str(self.game_id)
-            data_id = self.node.dataId(data_name)
-            self.seq_id += 1
-            data_val = {'SeqID': self.seq_id, 'PosX': x, 'PosY': y, 'Status': DRAW}
-            if not self.node.setData(data_id, json.dumps(data_val)):
-                print("Fail to set data %s = %s" % (data_name, data_val))
-            else:
-                print("Data set chess pos (x:%s, y%s) to cloud" % (str(x), str(y))),
 
 #        def update(self):
 #            msg = 'Game Over'
@@ -223,6 +215,7 @@ if __name__ == "__main__":
 
     
         def run(self):
+            old_data = ''
             while not self.done and not self.won_game:
                 #try: 
                 time.sleep(1)
@@ -249,11 +242,11 @@ if __name__ == "__main__":
                                 x1,y1 = self.put_AI_chess(x,y,2)
                                 self.is_game_over(x1,y1,2)
                         elif color == 1: # white - real put 
-                            if self.grid[x][y] == 0:
-                                print "Why didn't you put the chess as I suggested?"
-                                self.put_human_chess(x, y, 2) # self.role_id:0/put chess value is 1/black
-                                self.is_game_over(x,y,2) 
-                                #Waiting for next put from the camera
+                            #if self.grid[x][y] == 0:
+                            #    print "Why didn't you put the chess as I suggested?"
+                            self.put_human_chess(x, y, 2) # self.role_id:0/put chess value is 1/black
+                            self.is_game_over(x,y,2) 
+                            #Waiting for next put from the camera
                 #except:
                 #    print("Fail to get data %s" % data)
             print "## gave over and exit"
