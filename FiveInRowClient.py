@@ -973,10 +973,10 @@ if __name__ == "__main__":
                     msg = 'Got Winner!'
                     self.game_over, self.game_over_rect = self.make_text(msg, RED, (x,y), msg_font_size)
                 elif int(self.role_id) == self.pawn:
-                    msg = 'You Won!'
+                    msg = 'You Win!'
                     self.game_over, self.game_over_rect = self.make_text(msg, RED, (x,y), msg_font_size)
                 else:
-                    msg = 'You Lost!'
+                    msg = 'You Lose!'
                     self.game_over, self.game_over_rect = self.make_text(msg, BLUE, (x,y), msg_font_size)
 
     

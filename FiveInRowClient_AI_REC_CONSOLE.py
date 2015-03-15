@@ -192,27 +192,6 @@ if __name__ == "__main__":
             print 'Intel Galileo moves to (%d,%d) (score:%d)'%(row, col, score)
             return (row,col)
 
-#        def update(self):
-#            msg = 'Game Over'
-#            if self.won_game:
-#                x = self.right_board_x // 2
-#                y = SCREEN_HIGHT // 2
-#
-#                if TOUCH_SCREEN == True:
-#                    msg_font_size = 50
-#                else:
-#                    msg_font_size = 120
-#
-#                if self.role_id == "2":
-#                    msg = 'Got Winner!'
-#                    self.game_over, self.game_over_rect = self.make_text(msg, RED, (x,y), msg_font_size)
-#                elif int(self.role_id) == self.pawn:
-#                    msg = 'You Won!'
-#                    self.game_over, self.game_over_rect = self.make_text(msg, RED, (x,y), msg_font_size)
-#                else:
-#                    msg = 'You Lost!'
-#                    self.game_over, self.game_over_rect = self.make_text(msg, BLUE, (x,y), msg_font_size)
-
     
         def run(self):
             old_data = ''
