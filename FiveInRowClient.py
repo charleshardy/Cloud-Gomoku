@@ -12,8 +12,8 @@ from toolbox import button
 from toolbox import tools
 
 # Cloud API
-from node import Node
-from config import *
+from CloudAPI.node import Node
+from CloudAPI.config import *
 
 #                 R    G    B
 GRAY          = (100, 100, 100)
@@ -29,8 +29,6 @@ BLACK         = (  0,   0,   0)
 BRIGHT_GREEN  = (  0, 255,   0)
 BRIGHT_RED    = (255,   0,   0)
 NAVYBLUE      = ( 60,  60, 100)
-
-GRID_LINE     = (105,  50,   6)
 
 DRAW = 0
 CONTINUE = 1
