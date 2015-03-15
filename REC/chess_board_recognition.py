@@ -92,13 +92,37 @@ def inKnownPosition(x, y, positions):
 	return False
 
 def inKnownStarPosition(x, y):
-	return inKnownPosition(x, y, starPositions)
+	# 单个方向上的误差是正负2
+	delta_threshold = 4
+	# 遍历所有已经记录的位置，如果新的位置距离所有已经记录的位置超过阈值，
+	# 则表示这是一个新的合法的位置。
+	for i in starPositions:
+		x_delta = abs(i[0] - x)
+		y_delta = abs(i[1] - y)
+		if x_delta < delta_threshold and y_delta < delta_threshold:
+			return True
+
+	return False
+
+def inKnownChessPosition(x, y, positions):
+	# 单个方向上的误差是正负2
+	delta_threshold = 4
+	# 遍历所有已经记录的位置，如果新的位置距离所有已经记录的位置超过阈值，
+	# 则表示这是一个新的合法的位置。
+	for i in positions:
+		x_delta = abs(i[0] - x)
+		y_delta = abs(i[1] - y)
+		if x_delta < delta_threshold and y_delta < delta_threshold:
+			# 如果已经被计算过棋盘坐标，那么就算作已知的棋子
+			return i[2] == True
+
+	return False
 
 def inKnownBlackChessPosition(x, y):
-	return inKnownPosition(x, y, blackChessPositions)
+	return inKnownChessPosition(x, y, blackChessPositions)
 
 def inKnownWhiteChessPosition(x, y):
-	return inKnownPosition(x, y, whiteChessPositions)
+	return inKnownChessPosition(x, y, whiteChessPositions)
 
 def calcStarPosition(x, y):
 	# If 4 stars are available on the chess board,
@@ -214,9 +238,7 @@ def detectCircles(screen, **p):
 		if debug & DEBUG_DETECT_CIRCLE:
 			print("%d circles detected" % circles.shape[1])
 
-		# FIX
 		return np.uint16(np.around(circles[0]))
-#		return np.uint16(np.around(circles))
 
 	if debug & DEBUG_DETECT_CIRCLE:
 		print("No circle detected")
@@ -264,8 +286,6 @@ def processFrame(prev_frame, curr_frame, **param):
 	circles = detectCircles(frame, **param)
 
 	if circles is not None:
-		# FIX
-		#for i in circles[0, :]:
 		for i in circles:
 			x = int(i[0])
 			y = int(i[1])
@@ -276,17 +296,8 @@ def processFrame(prev_frame, curr_frame, **param):
 				print("Detected circle: gray %f @(%d, %d, %d)" % (gray, x, y, r))
 				drawCircle(curr_frame, x, y, r, (127, 127, 127))
 
-			#FIX
-			#if i.mean() == 0:
-			#	continue
-
 			if x + r >= screen_width or x - r < 0 or \
 				y + r >= screen_height or y - r < 0:
-				continue
-
-			if inKnownStarPosition(x, y) == True:
-				if debug & DEBUG_DETECT_OBJECT:
-					drawCircle(curr_frame, x, y, r, (0, 255, 0))
 				continue
 
 			if inKnownBlackChessPosition(x, y) == True:
@@ -296,7 +307,13 @@ def processFrame(prev_frame, curr_frame, **param):
 
 			if inKnownWhiteChessPosition(x, y) == True:
 				if debug & DEBUG_DETECT_OBJECT:
-					drawCircle(curr_frame, x, y, r, (255, 255, 255))
+					drawCircle(curr_frame, x, y, r, (0, 0, 0))
+				continue
+
+			# 当棋子放在了星号上的时候，应该优先显示棋子的轮廓
+			if inKnownStarPosition(x, y) == True:
+				if debug & DEBUG_DETECT_OBJECT:
+					drawCircle(curr_frame, x, y, r, (0, 255, 0))
 				continue
 
 			if detectStars(gray, r) == True:
