@@ -9,19 +9,26 @@ import cv2.cv as cv
 from optparse import OptionParser
 import numpy as np
 
+DEBUG_VERBOSE = 1
+DEBUG_BENCHMARK = 2
+DEBUG_DETECT_CIRCLE = 4
+DEBUG_DETECT_OBJECT = 8
+DEBUG_LOW_LEVEL = 0x10
+
 def get_put_chess():
 	global currReportIndex
-	try:
-		ret = tuple(boardCoodinates[currReportIndex])
-		currReportIndex += 1
-	except IndexError:
+	# TODO: use mutex
+	if len(boardCoodinates) == currReportIndex:
 		return ()
+
+	ret = tuple(boardCoodinates[currReportIndex])
+	currReportIndex += 1
 
 	return ret
 
-def calcChessCoodinate(i):
-	name = "Black chess" if i[2] == 0 else "White chess"
-	if debug >= 1:
+def calcChessCoodinate(i, color):
+	name = "Black chess" if color == 0 else "White chess"
+	if debug & DEBUG_DETECT_OBJECT:
 		print("calcChessCoodinate(" + name + "): (%d, %d)" % (i[0], i[1]))
 
 	x_delta = (i[0] - leftTopStarPosition[0] + gridInterval / 2.0) / gridInterval
@@ -29,102 +36,109 @@ def calcChessCoodinate(i):
 
 	cood = (leftTopStarCoodinate[0] + int(x_delta), leftTopStarCoodinate[1] + int(y_delta))
 	if cood[0] >= maxChessBoardGrid or cood[1] >= maxChessBoardGrid:
-		if debug >= 1:
-			print(name + " (%d, %d) recongnized but out of chess board" % (cood[0], cood[1]))
+		if debug & (DEBUG_VERBOSE | DEBUG_DETECT_OBJECT) == DEBUG_VERBOSE | DEBUG_DETECT_OBJECT:
+			print(name + " (%d, %d) recongnized but out of chess board (%d)" % (cood[0], cood[1], maxChessBoardGrid))
 		return
 
-	if debug >= 1:
+	if debug:
 		print(name + " (%d, %d) recongnized" % (cood[0], cood[1]))
 
-	boardCoodinates.append((cood[0], cood[1], i[2]))
+	# FIXME: use mutex
+	boardCoodinates.append((cood[0], cood[1], color))
 
-def calcChessPosition(x, y, type):
-	if len(chessPositions) > 0:
-		min_x_delta = screen_width
-		min_y_delta = screen_height
-		# 单个方向上的误差是正负2
-		delta_threshold = 4
-		# 遍历所有已经记录的位置，如果新的位置距离所有已经记录的位置超过阈值，
-		# 则表示这是一个新的合法的棋子。
-		for i in chessPositions:
-			x_delta = abs(i[0] - x)
-			y_delta = abs(i[1] - y)
-			if x_delta <= delta_threshold and y_delta <= delta_threshold:
-				return
+def putVirtualBoard(x, y, color):
+	if debug & DEBUG_DETECT_OBJECT:
+		print("putVirtualBoard(): (%d, %d, color = %d) added" % (x, y, color))
 
-		# we have a new coordinate of chess
-		chessPositions.append([x, y, type, False])
+	if color == 0:
+		blackChessPositions.append([x, y, False])
 	else:
-		chessPositions.append([x, y, type, False])
-
-def putVirtualBoard(x, y, type):
-	calcChessPosition(x, y, type)
+		whiteChessPositions.append([x, y, False])
 
 	# 检查是否可以开始计算每个棋子的坐标了
 	if leftTopStarPosition == ():
 		return
 
-	for i in chessPositions:
-		# 表示还没有经过坐标计算
-		if i[3] == False:
-			calcChessCoodinate(i)
-			# 标记为已经计算过
-			i[3] = True
+	for i in blackChessPositions:
+		if i[2] == True:
+			continue
 
-	if debug >= 1:
+		# 表示还没有经过坐标计算
+		calcChessCoodinate(i, color = 0)
+		# 标记为已经计算过
+		i[2] = True
+
+	for i in whiteChessPositions:
+		if i[2] == True:
+			continue
+
+		calcChessCoodinate(i, color = 1)
+		i[2] = True
+
+	if debug:
 		print("boardCoodinates: ", boardCoodinates)
 
-def calcStarPosition(x, y):
-	if debug >= 3:
-		print("calcStarPosition(): checking (%d, %d) against %d" % (x, y, len(starPositions)))
+def inKnownPosition(x, y, positions):
+	# 单个方向上的误差是正负2
+	delta_threshold = 4
+	# 遍历所有已经记录的位置，如果新的位置距离所有已经记录的位置超过阈值，
+	# 则表示这是一个新的合法的位置。
+	for i in positions:
+		x_delta = abs(i[0] - x)
+		y_delta = abs(i[1] - y)
+		if x_delta < delta_threshold and y_delta < delta_threshold:
+			return True
 
-	# 4 stars available on the chess board
+	return False
+
+def inKnownStarPosition(x, y):
+	return inKnownPosition(x, y, starPositions)
+
+def inKnownBlackChessPosition(x, y):
+	return inKnownPosition(x, y, blackChessPositions)
+
+def inKnownWhiteChessPosition(x, y):
+	return inKnownPosition(x, y, whiteChessPositions)
+
+def calcStarPosition(x, y):
+	# If 4 stars are available on the chess board,
+	# there is no need to recalculate the positions.
 	if len(starPositions) == 4:
 		return
-	elif len(starPositions) > 0:
-		min_x_delta = screen_width
-		min_y_delta = screen_height
-		# 单个方向上的误差是正负2
-		delta_threshold = 4
-		# 遍历所有已经记录的位置，如果新的位置距离所有已经记录的位置超过阈值，
-		# 则表示这是一个新的合法的星。
-		for i in starPositions:
-			x_delta = abs(i[0] - x)
-			y_delta = abs(i[1] - y)
-			if x_delta <= delta_threshold and y_delta <= delta_threshold:
-				return
 
-		# we have a new coordinate of star
-		starPositions.append((x, y))
-	else:
-		starPositions.append((x, y))
-		return
-
-	if debug >= 3:
+	if debug & DEBUG_DETECT_OBJECT:
 		print("calcStarPosition(): (%d, %d) added to %s" % (x, y, repr(starPositions)))
 
+	# we have a new coordinate of star
+	starPositions.append((x, y))
+
+	if len(starPositions) != 4:
+		return
+
 	# 当统计出了4个坐标以后，找出左上角的坐标
+	# TODO: 找出4个星的坐标
 	min = 0
 	leftTopIndex = 0
-	if len(starPositions) == 4:
-		for n, i in enumerate(starPositions):
-			if min and i[0] + i[1] >= min:
-				continue
+	for n, i in enumerate(starPositions):
+		# 左上角的星的x、y坐标和一定是最小的
+		if min and i[0] + i[1] >= min:
+			continue
 
-			min = i[0] + i[1]
-			leftTopIndex = n
+		min = i[0] + i[1]
+		leftTopIndex = n
 
-		global leftTopStarPosition
-		leftTopStarPosition = (starPositions[leftTopIndex][0], starPositions[leftTopIndex][1])
+	global leftTopStarPosition
+	leftTopStarPosition = (starPositions[leftTopIndex][0], starPositions[leftTopIndex][1])
 
-		if debug >= 1:
-			print("Left top star @ (%d, %d)" % (leftTopStarPosition[0], leftTopStarPosition[1]))
+	if debug:
+		print("Left top star @ (%d, %d)" % \
+			(leftTopStarPosition[0], leftTopStarPosition[1]))
 
 def __showHist(img, color, desc):
 	hist = cv2.calcHist([img], [0], None, histSize = [256], ranges = [0, 256])
 	minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(hist)
 	maxLimit = img.shape[0] * img.shape[1]
-	if debug >= 3:
+	if debug & (DEBUG_VERBOSE | DEBUG_LOW_LEVEL) == DEBUG_VERBOSE | DEBUG_LOW_LEVEL:
 		print("%s statistics:" % desc)
 		print("  min intensity: %d" % minLoc[1])
 		print("  numbers of min intensity: %d (%f%%)" % (minVal, minVal * 100 / maxLimit))
@@ -153,33 +167,29 @@ def showHist(img, title):
 
 	__showHist(gray, (127, 127, 127), title + ": gray")
 
-def drawCircle(frame, c, color):
-	if debug >= 1:
-	    # draw the outer circle
-		cv2.circle(frame, (c[0], c[1]), c[2], color, 1)
-		# draw the center of the circle
-		cv2.circle(frame, (c[0], c[1]), 1, (0, 0, 255), 1)
+def drawCircle(frame, x, y, r, color):
+    # draw the outer circle
+	cv2.circle(frame, (x, y), r, color, 1)
+	# draw the center of the circle
+	cv2.circle(frame, (x, y), 1, (0, 0, 255), 1)
 
 def detectCircles(screen, **p):
-	if debug >= 2:
+	if debug & DEBUG_BENCHMARK:
 		e1 = cv2.getTickCount()
 
 	img = cv2.cvtColor(screen, cv2.COLOR_BGR2GRAY)
-	if debug >= 3:
-		showHist(img, "Screen gray")
-		cv2.imshow("Screen gray", img)
+
+	if debug & (DEBUG_LOW_LEVEL | DEBUG_VERBOSE) == DEBUG_LOW_LEVEL | DEBUG_VERBOSE:
+		cv2.imshow("Gray screen", img)
 
 	if False:
 		img = cv2.equalizeHist(img)
-		if debug >= 1:
+		if debug & (DEBUG_LOW_LEVEL | DEBUG_VERBOSE) == DEBUG_LOW_LEVEL | DEBUG_VERBOSE:
 			showHist(img, "equalizeHist")
 
-	if True:
-		#l = cv2.Laplacian(img, cv2.CV_8U, ksize = 1, scale = 1, delta = 0)
-		#l = cv2.Laplacian(img, cv2.CV_8U, ksize = p["kernelSize"], borderType = cv2.BORDER_REFLECT)
-		l = cv2.Laplacian(img, cv2.CV_8U, ksize = 5, borderType = cv2.BORDER_CONSTANT)
-		ret, l = cv2.threshold(l, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-		#ret, l = cv2.threshold(l, 0, 255, p["threshold"] + cv2.THRESH_OTSU)
+	if p["lKernelSize"]:
+		l = cv2.Laplacian(img, cv2.CV_8U, ksize = p["lKernelSize"], borderType = cv2.BORDER_CONSTANT)
+		ret, l = cv2.threshold(l, 0, 255, p["thresholdType"] + cv2.THRESH_OTSU)
 		img -= l
 
 	if p["gKernelSize"]:
@@ -190,72 +200,60 @@ def detectCircles(screen, **p):
 		img = cv2.dilate(img, kernel, iterations = p["iter"])
 		img = cv2.erode(img, kernel, iterations = p["iter"])
 
-	if True:
-		circles = cv2.HoughCircles(img, cv.CV_HOUGH_GRADIENT, 1, p["minDist"], \
-			param2 = p["accThreshold"], minRadius = p["minRadius"], maxRadius = p["maxRadius"])
-	else:
-		circles = cv2.HoughCircles(img, cv.CV_HOUGH_GRADIENT, 1, p["minDist"], param1= p["cannyThreshold"], \
-			param2 = p["accThreshold"], minRadius = p["minRadius"], maxRadius = p["maxRadius"])
+	circles = cv2.HoughCircles(img, cv.CV_HOUGH_GRADIENT, 1, p["minDist"], param1= p["cannyThreshold"], \
+		param2 = p["accThreshold"], minRadius = p["minRadius"], maxRadius = p["maxRadius"])
 
-	if debug >= 2:
+	if debug & DEBUG_BENCHMARK:
 		e2 = cv2.getTickCount()
 		print("detectCircles() takes %f sec" % ((e2 - e1) / cv2.getTickFrequency()))
 
-	if debug >= 3:
-		cv2.imshow("Circles detected ...", img)
+	if debug & DEBUG_LOW_LEVEL:
+		cv2.imshow("Circles detected screen", img)
 
 	if circles is not None:
-		if debug >= 3:
+		if debug & DEBUG_DETECT_CIRCLE:
 			print("%d circles detected" % circles.shape[1])
 
-		return np.uint16(np.around(circles))
+		# FIX
+		return np.uint16(np.around(circles[0]))
+#		return np.uint16(np.around(circles))
 
-	if debug >= 3:
+	if debug & DEBUG_DETECT_CIRCLE:
 		print("No circle detected")
 
 	return None
 
-def filterCircles(frame, circles, targetGray, grayDelta, radius, radiusDelta, desc):
-	chesses = []
+def filterCircles(gray, targetGray, grayDelta, r, radius, radiusDelta):
+	if abs(gray - targetGray) <= grayDelta and abs(r - radius) <= radiusDelta:
+		return True
 
-	for i in circles[0, :]:
-		if i.mean() == 0:
-			continue
+	return False
 
-		x = i[0]
-		y = i[1]
-		r = int(i[2])
+def detectWhiteChesses(gray, r):
+	if debug & (DEBUG_DETECT_OBJECT | DEBUG_VERBOSE) == DEBUG_DETECT_OBJECT | DEBUG_VERBOSE:
+		print("detectWhiteChesses(): gray %f vs %f +- %f, radius %f vs %f +- %f" \
+			% (gray, whiteChessGray, whiteChessGrayDelta, \
+			r, (minChessRadius + maxChessRadius) / 2.0, \
+			chessRadiusDelta))
+	return filterCircles(gray, whiteChessGray, whiteChessGrayDelta, \
+		r, (minChessRadius + maxChessRadius) / 2.0, chessRadiusDelta)
 
-		if x >= screen_width or y >= screen_height:
-			continue
+def detectBlackChesses(gray, r):
+	if debug & (DEBUG_DETECT_OBJECT | DEBUG_VERBOSE) == DEBUG_DETECT_OBJECT | DEBUG_VERBOSE:
+		print("detectBlackChesses(): gray %f vs %f +- %f, radius %f vs %f +- %f" \
+			% (gray, blackChessGray, blackChessGrayDelta, \
+			r, (minChessRadius + maxChessRadius) / 2.0, \
+			chessRadiusDelta))
+	return filterCircles(gray, blackChessGray, blackChessGrayDelta, \
+		r, (minChessRadius + maxChessRadius) / 2.0, chessRadiusDelta)
 
-		gray = int(frame[y, x].mean())
-		if debug >= 3:
-			print("filterCircles(" + desc + "): gray %d vs %d ? %d, radius %d vs %d ? %d" % (gray, targetGray, grayDelta, r, radius, radiusDelta))
-		if abs(gray - targetGray) <= grayDelta and abs(r - radius) <= radiusDelta:
-			chesses.append((x, y, r))
-			i[:] = 0
-			# TODO: 制作模板
-
-	return chesses
-
-def averageChessRadius():
-	return (minChessRadius + maxChessRadius) / 2.0
-
-def averageStarRadius():
-	return (minStarRadius + maxStarRadius) / 2.0
-
-def detectWhiteChesses(frame, circles):
-	return filterCircles(frame, circles, whiteChessGray, whiteChessGrayDelta, \
-		averageChessRadius(), chessRadiusDelta, "White Chess")
-
-def detectBlackChesses(frame, circles):
-	return filterCircles(frame, circles, blackChessGray, blackChessGrayDelta, \
-		averageChessRadius(), chessRadiusDelta, "Black Chess")
-
-def detectStars(frame, circles):
-	return filterCircles(frame, circles, starGray, starGrayDelta, \
-		averageStarRadius(), starRadiusDelta, "Star")
+def detectStars(gray, r):
+	if debug & (DEBUG_DETECT_OBJECT | DEBUG_VERBOSE) == DEBUG_DETECT_OBJECT | DEBUG_VERBOSE:
+		print("detectStars(): gray %f vs %f +- %f, radius %f vs %f +- %f" \
+			% (gray, starGray, starGrayDelta, r, \
+			(minStarRadius + maxStarRadius) / 2.0, starRadiusDelta))
+	return filterCircles(gray, starGray, starGrayDelta, \
+		r, (minStarRadius + maxStarRadius) / 2.0, starRadiusDelta)
 
 def processFrame(prev_frame, curr_frame, **param):
 #	if prev_frame is not None:
@@ -266,106 +264,109 @@ def processFrame(prev_frame, curr_frame, **param):
 	circles = detectCircles(frame, **param)
 
 	if circles is not None:
-		for i in circles[0, :]:
-			if i.mean() == 0:
+		# FIX
+		#for i in circles[0, :]:
+		for i in circles:
+			x = int(i[0])
+			y = int(i[1])
+			r = int(i[2])
+			gray = float(frame[y, x].mean())
+
+			if debug & DEBUG_DETECT_CIRCLE:
+				print("Detected circle: gray %f @(%d, %d, %d)" % (gray, x, y, r))
+				drawCircle(curr_frame, x, y, r, (127, 127, 127))
+
+			#FIX
+			#if i.mean() == 0:
+			#	continue
+
+			if x + r >= screen_width or x - r < 0 or \
+				y + r >= screen_height or y - r < 0:
 				continue
 
-			# TODO: filter out invalid circles
-			if i[0] >= screen_width or i[1] >= screen_height:
+			if inKnownStarPosition(x, y) == True:
+				if debug & DEBUG_DETECT_OBJECT:
+					drawCircle(curr_frame, x, y, r, (0, 255, 0))
 				continue
 
-			if debug >= 3:
-				x = i[0]
-				y = i[1]
-				r = i[2]
-				print("Detected circle: gray %d @(%d, %d, %d)" % (frame[y, x].mean(), x, y, r))
-
-		Stars = detectStars(frame, circles)
-		for n in Stars:
-			if debug >= 1:
-				drawCircle(curr_frame, n, (0, 255, 0))
-			calcStarPosition(int(n[0]), int(n[1]))
-
-		BlackChesses = detectBlackChesses(frame, circles)
-		for n in BlackChesses:
-			if debug >= 1:
-				drawCircle(curr_frame, n, (255, 255, 255))
-			putVirtualBoard(int(n[0]), int(n[1]), type = 0)
-
-		whiteChesses = detectWhiteChesses(frame, circles)
-		for n in whiteChesses:
-			if debug >= 1:
-				drawCircle(curr_frame, n, (0, 0, 0))
-			putVirtualBoard(int(n[0]), int(n[1]), type = 1)
-
-		# 剩下的是不符合要求的采样
-		for i in circles[0, :]:
-			if i.mean() == 0:
+			if inKnownBlackChessPosition(x, y) == True:
+				if debug & DEBUG_DETECT_OBJECT:
+					drawCircle(curr_frame, x, y, r, (255, 255, 255))
 				continue
 
-			if debug >= 3:
-				print("Unmet circle: gray %f @(%d, %d, %d)" % (frame[i[1], i[0]].mean(), i[0], i[1], i[2]))
-				#print(err)
+			if inKnownWhiteChessPosition(x, y) == True:
+				if debug & DEBUG_DETECT_OBJECT:
+					drawCircle(curr_frame, x, y, r, (255, 255, 255))
+				continue
+
+			if detectStars(gray, r) == True:
+				# TODO: creating matching block for speeding up in futures
+				if debug & DEBUG_DETECT_OBJECT:
+					drawCircle(curr_frame, x, y, r, (0, 255, 0))
+
+				calcStarPosition(x, y)
+				continue
+
+			if detectBlackChesses(gray, r) == True:
+				if debug & DEBUG_DETECT_OBJECT:
+					drawCircle(curr_frame, x, y, r, (255, 255, 255))
+
+				putVirtualBoard(x, y, color = 0)
+				continue
+
+			if detectWhiteChesses(gray, r) == True:
+				if debug & DEBUG_DETECT_OBJECT:
+					drawCircle(curr_frame, x, y, r, (0, 0, 0))
+
+				putVirtualBoard(x, y, color = 1)
+				continue
+
+			# The remaining are unment circles
+			if debug & DEBUG_DETECT_OBJECT:
+				print("Unmet circle: gray %f @(%d, %d, %d)" % (gray, x, y, r))
 				#log.write(err.join("\n"))
-				drawCircle(curr_frame, i, (0, 0, 255))
+				drawCircle(curr_frame, x, y, r, (0, 0, 255))
 
-	if debug >= 1:
+	if debug:
 		cv2.imshow(screen_title, curr_frame)
 
 def nothing(x):
 	pass
 
-VERSION = '0.1'
-
-def parse_args():
-	parser = OptionParser(usage='%prog [-h] [--version] [-D debug] [-d camera_id]',
-						  version='%prog ' + VERSION)
-	parser.add_option('-D', '--debug-level', dest='debug', action='store',
-					  default=1, help='Specify the debug level [%default]')
-	parser.add_option('-d', '--camera-id', dest='camera_id', action='store',
-					  default=0, help='Specify the camera id [%default]')
-
-	opts, args = parser.parse_args()
-
-	if len(args):
-		parser.print_help()
-		sys.exit(-1)
-
-	return opts
-
-# 占位符。真正的设置见main()
-debug = 1
-startDelay = 2
-frameDelay = 300
-minChessRadius = 9.0
-maxChessRadius = 12.0
-chessRadiusDelta = 2.0
-minStarRadius = 5.0
-maxStarRadius = 7.0
-starRadiusDelta = 1.5
-whiteChessGray = 226
-whiteChessGrayDelta = 12
-blackChessGray = 31
-blackChessGrayDelta = 6
-starGray = 29
-starGrayDelta = 7
+# Place holders. See the details in main()
+debug = 0
+startDelay = 0
+frameDelay = 0
+minChessRadius = 0.0
+maxChessRadius = 0.0
+chessRadiusDelta = 0.0
+minStarRadius = 0.0
+maxStarRadius = 0.0
+starRadiusDelta = 0.0
+whiteChessGray = 0
+whiteChessGrayDelta = 0
+blackChessGray = 0
+blackChessGrayDelta = 0
+starGray = 0
+starGrayDelta = 0
 screen_title = "Chess Board"
 screen_width = 0
 screen_height = 0
 whiteChessRadius = 0
 whiteChessX = 0
 whiteChessY = 0
-maxChessBoardGrid = 10
+maxChessBoardGrid = 0
 leftTopStarCoodinate = (2, 2)
 boardCoodinates = []
 gridInterval = 41
-chessPositions = []
+blackChessPositions = []
+whiteChessPositions = []
 starPositions = []
 leftTopStarPosition = ()
 currReportIndex = 0
 	
-def main(camera_id = 0, debug_level = 3):
-	print("Carmera ID %d, debug level %d" % (camera_id, debug_level))
+def main(camera_id = 0, debug_level = DEBUG_DETECT_OBJECT, frame_delay = 300, image_test = False):
+	print("Carmera ID %d, debug level 0x%x" % (camera_id, debug_level))
 
 	# Global settings
 	global debug, startDelay, frameDelay, minChessRadius, maxChessRadius, chessRadiusDelta, \
@@ -373,26 +374,26 @@ def main(camera_id = 0, debug_level = 3):
 	blackChessGray, blackChessGrayDelta, starGray, starGrayDelta, screen_title, \
 	screen_width, screen_height, whiteChessRadius, whiteChessX, whiteChessY, \
 	leftTopStarCoodinate, boardCoodinates, gridInterval, chessPositions, starPositions, \
-	leftTopStarPosition, currReportIndex
+	leftTopStarPosition, currReportIndex, maxChessBoardGrid
 
 	# 0 - disabled
 	# 1 - enabled
 	# 2 - benchmark
 	# 3 - verbose message
-	# 4 - reserved
-	# 5 - show images
+	# 4 - low level debugging for circle detection
+	# 5 - lowest level debugging for image recognition
 	debug = debug_level
 
 	# 摄像头读取第一帧前的延迟（秒）
 	startDelay = 2
 
 	# 读取每一帧的延迟（豪秒）
-	frameDelay = 300
+	frameDelay = frame_delay
 
 	# 用于检测棋子的半径
-	minChessRadius = 9.0
+	minChessRadius = 10.0
 	maxChessRadius = 12.0
-	chessRadiusDelta = 2.0
+	chessRadiusDelta = 1.0
 
 	# 用于检测星号的半径
 	minStarRadius = 5.0
@@ -400,12 +401,12 @@ def main(camera_id = 0, debug_level = 3):
 	starRadiusDelta = 1.5
 
 	# 黑白棋子的亮度和最大误差
-	whiteChessGray = 226
-	whiteChessGrayDelta = 12
-	blackChessGray = 31
-	blackChessGrayDelta = 6
-	starGray = 29
-	starGrayDelta = 7
+	whiteChessGray = 213
+	whiteChessGrayDelta = 15
+	blackChessGray = 20
+	blackChessGrayDelta = 15
+	starGray = 20
+	starGrayDelta = 15
 
 	screen_title = "Chess Board"
 	screen_width = 0
@@ -433,100 +434,117 @@ def main(camera_id = 0, debug_level = 3):
 
 	log = open("log", "w")
 
-	# Start videp capture from camera
-	cap = cv2.VideoCapture(camera_id)
+	if image_test == False:
+		# Start video capture from camera
+		cap = cv2.VideoCapture(camera_id)
 
-	if not cap.isOpened():
-		print("Camera cannot be opened ...")
-		sys.exit(-1)
+		if not cap.isOpened():
+			print("Camera cannot be opened")
+			sys.exit(-1)
 
-	screen_width = cap.get(3)
-	screen_height = cap.get(4)
+		screen_width = int(cap.get(3))
+		screen_height = int(cap.get(4))
+	else:
+		test_img = cv2.imread("sample.bmp")
+		screen_width = int(test_img.shape[1])
+		screen_height = int(test_img.shape[0])
+
 	print("Screen width %d, height %d" % (screen_width, screen_height))
 
-	if debug >= 1:
+	# Default settings for low level parameters
+	minDist = 2 * int(maxChessRadius)
+	minRadius = int(minStarRadius)
+	maxRadius = int(maxChessRadius)
+	kernelSize = 3
+	iter = 2
+	gKernelSize = 3
+	sigma = 3
+	thresholdType = 1
+	cannyThreshold = 50
+	lKernelSize = 27
+	accThreshold = 18
+
+	if debug:
 		cv2.namedWindow(screen_title)
-		whiteChessGray = cv2.createTrackbar('White gray', screen_title, whiteChessGray, 255, nothing)
-		blackChessGray = cv2.createTrackbar('Black gray', screen_title, blackChessGray, 255, nothing)
-		starGray = cv2.createTrackbar('Star gray', screen_title, starGray, 255, nothing)
-		#cv2.createTrackbar('Kernel size for element', screen_title, 3, 255, nothing)
-		#cv2.createTrackbar('Iterations', screen_title, 2, 255, nothing)
-		#cv2.createTrackbar('Gaussian kernel size', screen_title, 5, 255, nothing)
-		#cv2.createTrackbar('Sigma for Gaussian', screen_title, 4, 255, nothing)
-		#cv2.createTrackbar('Threshold', screen_title, 0, 4, nothing)
-		cv2.createTrackbar('Accumulator threshold', screen_title, 14, 255, nothing)
-		cv2.createTrackbar('Minimum distance', screen_title, 2 * int(minChessRadius), 1024, nothing)
-		#cv2.createTrackbar('Threshold for Canny', screen_title, 200, 4096, nothing)
-		cv2.createTrackbar('Minimum circle radius', screen_title, int(minStarRadius), 20, nothing)
-		cv2.createTrackbar('Maximum circle radius', screen_title, int(maxChessRadius), 20, nothing)
-		#cv2.createTrackbar('Kernel size for Laplacian', screen_title, 5, 255, nothing)
-		#cv2.createTrackbar('Scale factor for Laplacian', screen_title, 1, 255, nothing)
-		#cv2.createTrackbar('Delta for Laplacian', screen_title, 0, 255, nothing)
-		#cv2.createTrackbar('Border Type for Laplacian', screen_title, 0, 4, nothing)
-	else:
-		kernelSize = 3
-		iter = 2
-		gKernelSize = 5
-		sigma = 4
-		accThreshold = 14
-		minDist = 2 * int(minChessRadius)
-		minRadius = int(minStarRadius)
-		maxRadius = int(maxChessRadius)
+		if debug & DEBUG_DETECT_CIRCLE:
+			cv2.createTrackbar('Minimum circle radius', screen_title, minRadius, 15, nothing)
+			cv2.createTrackbar('Maximum circle radius', screen_title, int(maxChessRadius), 15, nothing)
+			cv2.createTrackbar('Minimum distance', screen_title, minDist, screen_width, nothing)
+			cv2.createTrackbar('Accumulator threshold', screen_title, accThreshold, 50, nothing)
+		if debug & DEBUG_LOW_LEVEL:
+			cv2.createTrackbar('Kernel size for element', screen_title, kernelSize, 255, nothing)
+			cv2.createTrackbar('Iterations', screen_title, iter, 255, nothing)
+			cv2.createTrackbar('Gaussian kernel size', screen_title, gKernelSize, 255, nothing)
+			cv2.createTrackbar('Sigma for Gaussian', screen_title, sigma, 255, nothing)
+			cv2.createTrackbar('Threshold type', screen_title, thresholdType, 4, nothing)
+			cv2.createTrackbar('Canny threshold', screen_title, cannyThreshold, 1024, nothing)
+			cv2.createTrackbar('Laplacian kernel size', screen_title, lKernelSize, 31, nothing)
+			#cv2.createTrackbar('Scale factor for Laplacian', screen_title, 1, 255, nothing)
+			#cv2.createTrackbar('Delta for Laplacian', screen_title, 0, 255, nothing)
+			#cv2.createTrackbar('Border Type for Laplacian', screen_title, 0, 4, nothing)
+		if debug & DEBUG_DETECT_OBJECT:
+			cv2.createTrackbar('White gray', screen_title, whiteChessGray, 255, nothing)
+			cv2.createTrackbar('Black gray', screen_title, blackChessGray, 255, nothing)
+			cv2.createTrackbar('Star gray', screen_title, starGray, 255, nothing)
+			cv2.createTrackbar('White gray delta', screen_title, whiteChessGrayDelta, 50, nothing)
+			cv2.createTrackbar('Black gray delta', screen_title, blackChessGrayDelta, 50, nothing)
+			cv2.createTrackbar('Star gray delta', screen_title, starGrayDelta, 50, nothing)
 
-	# FIXME
-	if True:
-		kernelSize = 3
-		iter = 2
-		gKernelSize = 5
-		sigma = 4
-		accThreshold = 20
-		minDist = 2 * int(minChessRadius)
-		minRadius = int(minStarRadius)
-		maxRadius = int(maxChessRadius)
-
-	# 适当的延迟可以忽略掉在摄像头刚刚打开时包含的不稳定的前几帧数据
-	time.sleep(startDelay)
+	if image_test == False:
+		# 适当的延迟可以忽略掉在摄像头刚刚打开时包含的不稳定的前几帧数据
+		time.sleep(startDelay)
 
 	prev_frame = None
 	while True:
-		ret, curr_frame = cap.read()
+		if image_test == False:
+			ret, curr_frame = cap.read()
 
-		if ret is None:
-			print("Camera video EOF")
-			break
+			if ret is None:
+				print("Camera video EOF")
+				break
 
-		if debug >= 1:
-			cv2.imwrite("current_frame.bmp", curr_frame)
+			if debug:
+				cv2.imwrite("current_frame.bmp", curr_frame)
+		else:
+			curr_frame = test_img
 
+		if debug:
 			# get current positions of all trackbars
-			whiteChessGray = cv2.getTrackbarPos('White gray', screen_title)
-			blackChessGray = cv2.getTrackbarPos('Black gray', screen_title)
-			starGray = cv2.getTrackbarPos('Star gray', screen_title)
-			#kernelSize = cv2.getTrackbarPos('Kernel size for element', screen_title)
-			#iter = cv2.getTrackbarPos('Iterations', screen_title)
-			#gKernelSize = cv2.getTrackbarPos('Gaussian kernel size', screen_title)
-			#if gKernelSize:
-			#	gKernelSize = gKernelSize if gKernelSize & 1 else gKernelSize + 1
-			#sigma = cv2.getTrackbarPos('Sigma for Gaussian', screen_title)
-			#thresholdType = cv2.getTrackbarPos('Threshold', screen_title)
-			minDist = cv2.getTrackbarPos('Minimum distance', screen_title)
-			#cannyThreshold = cv2.getTrackbarPos('Threshold for Canny', screen_title)
-			#if cannyThreshold == 0:
-			#	cannyThreshold = 1
-			accThreshold = cv2.getTrackbarPos('Accumulator threshold', screen_title)
-			if accThreshold == 0:
-				accThreshold = 1
-			minRadius = cv2.getTrackbarPos('Minimum circle radius', screen_title)
-			maxRadius = cv2.getTrackbarPos('Maximum circle radius', screen_title)
-			#kernelSize = cv2.getTrackbarPos('Kernel size for Laplacian', screen_title)
-			#kernelSize = kernelSize if kernelSize & 1 else kernelSize + 1
-			#scale = cv2.getTrackbarPos('Scale factor for Laplacian', screen_title)
-			#delta = cv2.getTrackbarPos('Delta for Laplacian', screen_title)
-			#borderType = cv2.getTrackbarPos('Border Type for Laplacian', screen_title)
-			#if borderType == 3:
-			#	borderType = 4
+			if debug & DEBUG_DETECT_CIRCLE:
+				minDist = cv2.getTrackbarPos('Minimum distance', screen_title)
+				minRadius = cv2.getTrackbarPos('Minimum circle radius', screen_title)
+				maxRadius = cv2.getTrackbarPos('Maximum circle radius', screen_title)
+				accThreshold = cv2.getTrackbarPos('Accumulator threshold', screen_title)
+				if accThreshold == 0:
+					accThreshold = 1
+			if debug & DEBUG_LOW_LEVEL:
+				kernelSize = cv2.getTrackbarPos('Kernel size for element', screen_title)
+				iter = cv2.getTrackbarPos('Iterations', screen_title)
+				gKernelSize = cv2.getTrackbarPos('Gaussian kernel size', screen_title)
+				if gKernelSize:
+					gKernelSize = gKernelSize if gKernelSize & 1 else gKernelSize + 1
+				sigma = cv2.getTrackbarPos('Sigma for Gaussian', screen_title)
+				thresholdType = cv2.getTrackbarPos('Threshold type', screen_title)
+				cannyThreshold = cv2.getTrackbarPos('Canny threshold', screen_title)
+				if cannyThreshold == 0:
+					cannyThreshold = 1
+				lKernelSize = cv2.getTrackbarPos('Laplacian kernel size', screen_title)
+				if lKernelSize:
+					lKernelSize = lKernelSize if lKernelSize & 1 else lKernelSize + 1
+				#scale = cv2.getTrackbarPos('Scale factor for Laplacian', screen_title)
+				#delta = cv2.getTrackbarPos('Delta for Laplacian', screen_title)
+				#borderType = cv2.getTrackbarPos('Border Type for Laplacian', screen_title)
+				#if borderType == 3:
+				#	borderType = 4
+			if debug & DEBUG_DETECT_OBJECT:
+				whiteChessGray = cv2.getTrackbarPos('White gray', screen_title)
+				blackChessGray = cv2.getTrackbarPos('Black gray', screen_title)
+				starGray = cv2.getTrackbarPos('Star gray', screen_title)
+				whiteChessGrayDelta = cv2.getTrackbarPos('White gray delta', screen_title)
+				blackChessGrayDelta = cv2.getTrackbarPos('Black gray delta', screen_title)
+				starGrayDelta = cv2.getTrackbarPos('Star gray delta', screen_title)
 
-		if debug >= 1:
+		if debug:
 			frame = curr_frame.copy()
 		else:
 			frame = curr_frame
@@ -535,30 +553,63 @@ def main(camera_id = 0, debug_level = 3):
 			"whiteChessGray": whiteChessGray,
 			"blackChessGray": blackChessGray,
 			"starGray": starGray,
-			"gKernelSize": gKernelSize,
-			"sigma": sigma,
-			#"thresholdType": thresholdType,
+			"whiteChessGrayDelta": whiteChessGrayDelta,
+			"blackChessGrayDelta": blackChessGrayDelta,
+			"starGrayDelta": starGrayDelta,
 			"minDist": minDist,
-			#"cannyThreshold": cannyThreshold,
-			"accThreshold": accThreshold,
 			"minRadius": minRadius,
 			"maxRadius": maxRadius,
 			"kernelSize": kernelSize,
 			"iter": iter,
+			"gKernelSize": gKernelSize,
+			"sigma": sigma,
+			"thresholdType": thresholdType,
+			"cannyThreshold": cannyThreshold,
+			"lKernelSize": lKernelSize,
 			#"scale": scale,
 			#"delta": delta,
 			#"borderType": borderType,
+			"accThreshold": accThreshold,
 		}
 		processFrame(prev_frame, frame, **params)
 		prev_frame = curr_frame
 
-		if cv2.waitKey(frameDelay) & 0xFF == ord('q'):
-			break
+		if frameDelay:
+			cmd = cv2.waitKey(frameDelay) & 0xFF
+			if cmd == ord('q'):
+				break
+			elif cmd == ord('s'):
+				cv2.waitKey()
 
-	cap.release()
+	if image_test == False:
+		cap.release()
+
+	if debug:
+		cv2.destroyAllWindows()
+
 	log.close()
+
+VERSION = '0.3'
+
+def parse_args():
+	parser = OptionParser(usage='%prog [-h] [--version] [-D debug] [-d camera_id]',
+						  version='%prog ' + VERSION)
+	parser.add_option('-D', '--debug-level', dest='debug', action='store',
+					  default=DEBUG_DETECT_OBJECT, help='Specify the debug level [%default]')
+	parser.add_option('-d', '--camera-id', dest='camera_id', action='store',
+					  default=0, help='Specify the camera id [%default]')
+	parser.add_option('-f', '--frame-delay', dest='frame_delay', action='store',
+					  default=300, help='Specify the delay per frame in ms [%default]')
+
+	opts, args = parser.parse_args()
+
+	if len(args):
+		parser.print_help()
+		sys.exit(-1)
+
+	return opts
 
 if __name__ == "__main__":
 	opts = parse_args()
 
-	main(int(opts.camera_id), int(opts.debug))
+	main(int(opts.camera_id), int(opts.debug), int(opts.frame_delay))
