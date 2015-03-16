@@ -31,11 +31,26 @@ def calcChessCoodinate(i, color):
 	if debug & DEBUG_DETECT_OBJECT:
 		print("calcChessCoodinate(" + name + "): (%d, %d)" % (i[0], i[1]))
 
-	x_delta = (i[0] - leftTopStarPosition[0] + gridInterval / 2.0) / gridInterval
-	y_delta = (i[1] - leftTopStarPosition[1] + gridInterval / 2.0) / gridInterval
+	x_delta = int(i[0] - leftTopStarPosition[0])
+	if x_delta >= -2:
+		x_delta += gridInterval / 2
+		x_delta /= gridInterval
+	else:
+		x_delta -= gridInterval / 2
+		x_delta /= -gridInterval
+		x_delta = -x_delta
+
+	y_delta = int(i[1] - leftTopStarPosition[1])
+	if y_delta >= -2:
+		y_delta += gridInterval / 2
+		y_delta /= gridInterval
+	else:
+		y_delta -= gridInterval / 2
+		y_delta /= -gridInterval
+		y_delta = -y_delta
 
 	cood = (leftTopStarCoodinate[0] + int(x_delta), leftTopStarCoodinate[1] + int(y_delta))
-	if cood[0] >= maxChessBoardGrid or cood[1] >= maxChessBoardGrid:
+	if cood[0] > maxChessBoardGrid or cood[0] < 0 or cood[1] > maxChessBoardGrid or cood[1] < 0:
 		if debug & (DEBUG_VERBOSE | DEBUG_DETECT_OBJECT) == DEBUG_VERBOSE | DEBUG_DETECT_OBJECT:
 			print(name + " (%d, %d) recongnized but out of chess board (%d)" % (cood[0], cood[1], maxChessBoardGrid))
 		return
@@ -91,7 +106,7 @@ def inKnownPosition(x, y, positions):
 
 	return False
 
-def inKnownStarPosition(x, y):
+def inKnownStarPosition(x, y, r):
 	# 单个方向上的误差是正负2
 	delta_threshold = 4
 	# 遍历所有已经记录的位置，如果新的位置距离所有已经记录的位置超过阈值，
@@ -99,7 +114,8 @@ def inKnownStarPosition(x, y):
 	for i in starPositions:
 		x_delta = abs(i[0] - x)
 		y_delta = abs(i[1] - y)
-		if x_delta < delta_threshold and y_delta < delta_threshold:
+		r_delta = abs((minStarRadius + maxStarRadius) / 2.0 - r)
+		if x_delta < delta_threshold and y_delta < delta_threshold and r_delta < delta_threshold / 2:
 			return True
 
 	return False
@@ -311,7 +327,7 @@ def processFrame(prev_frame, curr_frame, **param):
 				continue
 
 			# 当棋子放在了星号上的时候，应该优先显示棋子的轮廓
-			if inKnownStarPosition(x, y) == True:
+			if inKnownStarPosition(x, y, r) == True:
 				if debug & DEBUG_DETECT_OBJECT:
 					drawCircle(curr_frame, x, y, r, (0, 255, 0))
 				continue
@@ -375,7 +391,7 @@ whiteChessY = 0
 maxChessBoardGrid = 0
 leftTopStarCoodinate = (2, 2)
 boardCoodinates = []
-gridInterval = 41
+gridInterval = 0
 blackChessPositions = []
 whiteChessPositions = []
 starPositions = []
@@ -410,20 +426,20 @@ def main(camera_id = 0, debug_level = DEBUG_DETECT_OBJECT, frame_delay = 300, im
 	# 用于检测棋子的半径
 	minChessRadius = 10.0
 	maxChessRadius = 12.0
-	chessRadiusDelta = 1.0
+	chessRadiusDelta = 2.0
 
 	# 用于检测星号的半径
 	minStarRadius = 5.0
 	maxStarRadius = 7.0
-	starRadiusDelta = 1.5
+	starRadiusDelta = 2
 
 	# 黑白棋子的亮度和最大误差
-	whiteChessGray = 213
+	whiteChessGray = 217
 	whiteChessGrayDelta = 15
 	blackChessGray = 20
 	blackChessGrayDelta = 15
-	starGray = 20
-	starGrayDelta = 15
+	starGray = 35
+	starGrayDelta = 25
 
 	screen_title = "Chess Board"
 	screen_width = 0
@@ -439,7 +455,7 @@ def main(camera_id = 0, debug_level = DEBUG_DETECT_OBJECT, frame_delay = 300, im
 	# 保存已经下了的棋子所在的坐标
 	boardCoodinates = []
 	# 格子间隔
-	gridInterval = 41
+	gridInterval = 44
 	# 保存棋子的位置
 	chessPositions = []
 	# 保存所有星的位置
@@ -477,9 +493,9 @@ def main(camera_id = 0, debug_level = DEBUG_DETECT_OBJECT, frame_delay = 300, im
 	gKernelSize = 3
 	sigma = 3
 	thresholdType = 1
-	cannyThreshold = 50
+	cannyThreshold = 60
 	lKernelSize = 27
-	accThreshold = 18
+	accThreshold = 15
 
 	if debug:
 		cv2.namedWindow(screen_title)
@@ -507,11 +523,12 @@ def main(camera_id = 0, debug_level = DEBUG_DETECT_OBJECT, frame_delay = 300, im
 			cv2.createTrackbar('Black gray delta', screen_title, blackChessGrayDelta, 50, nothing)
 			cv2.createTrackbar('Star gray delta', screen_title, starGrayDelta, 50, nothing)
 
-	if image_test == False:
+	#if image_test == False:
 		# 适当的延迟可以忽略掉在摄像头刚刚打开时包含的不稳定的前几帧数据
-		time.sleep(startDelay)
+		#time.sleep(startDelay)
 
 	prev_frame = None
+	fnr = 0
 	while True:
 		if image_test == False:
 			ret, curr_frame = cap.read()
@@ -520,7 +537,15 @@ def main(camera_id = 0, debug_level = DEBUG_DETECT_OBJECT, frame_delay = 300, im
 				print("Camera video EOF")
 				break
 
-			if debug:
+			fnr += 1
+			#if fnr & 0xf != 0:
+			if fnr % 10 != 0:
+				continue
+				
+			if False:
+				#fn = time.strftime('%H-%M-%S.bmp',time.localtime(time.time()))
+				#print fn
+				#cv2.imwrite(fn, curr_frame)
 				cv2.imwrite("current_frame.bmp", curr_frame)
 		else:
 			curr_frame = test_img
