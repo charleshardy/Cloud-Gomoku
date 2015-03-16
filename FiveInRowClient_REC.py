@@ -554,6 +554,7 @@ if __name__ == "__main__":
             self.soc.settimeout(None)
     
         def set_last_chess_prompt(self, x, y):
+            return
 
             print "set_last_chess_prompt (", "x:", x, "y:", y, ")"
             if x <= CHESS_BOARD_BLOCK_COUNTS  and y <= CHESS_BOARD_BLOCK_COUNTS and x >= 0 and y >= 0:
