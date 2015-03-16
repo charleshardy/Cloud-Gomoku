@@ -9,6 +9,7 @@ import threading
 from AI import searcher
 import time
 from REC import chess_board_recognition
+import copy
 
 #                 R    G    B
 GRAY          = (100, 100, 100)
@@ -57,6 +58,7 @@ if __name__ == "__main__":
             self.user_name = "Charles"
 
             self.grid = [[0 for x in range(CHESS_BOARD_BLOCK_COUNTS + 1)] for y in range(CHESS_BOARD_BLOCK_COUNTS + 1)]
+            self.grid_ai = [[0 for x in range(CHESS_BOARD_BLOCK_COUNTS + 1)] for y in range(CHESS_BOARD_BLOCK_COUNTS + 1)]
 
             ### Your turn: Put down the first chess at the center of the board
             if self.role_id == '0':
@@ -67,7 +69,8 @@ if __name__ == "__main__":
             # Recognizing Mode
             self.rec_data = True
             if self.rec_data == True:
-                self.T_CAMERA_REC = threading.Thread(target = chess_board_recognition.main, args = (0, 0))
+                #self.T_CAMERA_REC = threading.Thread(target = chess_board_recognition.main, args = (0, chess_board_recognition.DEBUG_DETECT_OBJECT, 100))
+                self.T_CAMERA_REC = threading.Thread(target = chess_board_recognition.main, args = (0, 0, 0))
                 self.T_CAMERA_REC.start()
              
         def quit_click(self):
@@ -98,15 +101,32 @@ if __name__ == "__main__":
                     self.grid[x][y] = who_put # 1
                     self.your_turn = False
 
-        def is_game_over(self, x, y, who_put):
-            print "###################### who_put: ", str(who_put)
-            print "0 1 2 3 4 5 6 7 8 9 10"
-            print "######################"
+        def show_real_chess(self):
+            #print "   ###################### who_put: ", str(who_put)
+            print "   ######## REAL ########"
+            print "   0 1 2 3 4 5 6 7 8 9 10"
+            print "   ######################"
             for iy in range(0, CHESS_BOARD_BLOCK_COUNTS + 1):
+                print '{:2}#'.format(str(iy)),
                 for ix in range(0, CHESS_BOARD_BLOCK_COUNTS + 1):
                     print '{:1}'.format(str(self.grid[ix][iy])),
                 print
-            print "######################"
+            print "   ######################"
+
+        def show_ai_chess(self):
+            #print "   ###################### who_put: ", str(who_put)
+            print "   ========= AI ========="
+            print "   0 1 2 3 4 5 6 7 8 9 10"
+            print "   ======================"
+            for iy in range(0, CHESS_BOARD_BLOCK_COUNTS + 1):
+                print '{:2}:'.format(str(iy)),
+                for ix in range(0, CHESS_BOARD_BLOCK_COUNTS + 1):
+                    print '{:1}'.format(str(self.grid_ai[ix][iy])),
+                print
+            print "   ======================"
+
+        def is_game_over(self, x, y, who_put):
+            #self.show_real_chess()
 
             return self.is_winner(x,y, who_put)
 
@@ -178,8 +198,10 @@ if __name__ == "__main__":
             x,y = self.AI_put(last_x, last_y, who_put)
             if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1:
                 if self.grid[x][y] == 0:
-                    #self.grid[x][y] = who_put # 2
+                    self.grid_ai = copy.deepcopy(self.grid)
+                    self.grid_ai[x][y] = 8 # 2
                     self.your_turn = True
+                    self.show_ai_chess()
             return x,y
          
         def AI_put(self, last_x, last_y, who_put):
@@ -209,14 +231,15 @@ if __name__ == "__main__":
                     #print "# data", data
                     #print "# cmp(data,old_data):", cmp(data,old_data)
                     x = data[0]
-                    print "x:", x
+                    #print "x:", x
                     y = data[1]
-                    print "y:", y
+                    #print "y:", y
                     color = data[2]
-                    print "color:", color
+                    #print "color:", color
                     if x < CHESS_BOARD_BLOCK_COUNTS + 1 and y < CHESS_BOARD_BLOCK_COUNTS + 1 and x >= 0 and y >= 0:
                         if color == 0: # black - Human / white - AI
                             self.put_human_chess(x, y, 1) # self.role_id:0/put chess value is 1/black
+                            self.show_real_chess()
                             if not self.is_game_over(x,y,1): 
                                 x1,y1 = self.put_AI_chess(x,y,2)
                                 self.is_game_over(x1,y1,2)
@@ -224,6 +247,7 @@ if __name__ == "__main__":
                             #if self.grid[x][y] == 0:
                             #    print "Why didn't you put the chess as I suggested?"
                             self.put_human_chess(x, y, 2) # self.role_id:0/put chess value is 1/black
+                            self.show_real_chess()
                             self.is_game_over(x,y,2) 
                             #Waiting for next put from the camera
                 #except:
