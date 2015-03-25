@@ -1,70 +1,56 @@
-This game was designed for two competitors online over a cloud.
+This well-known Five-In-Row game is designed for demonstrating how to
+completely implement it based on the cloud.
 
 - Preparation
-This game depends on two python modules: pygame and requests.
+The game is completely written in python. The supporting python version is
+2.7.x. Additionally, this game depends the following python modules: pygame,
+requests and cv2.
 
 * Linux
 If you are running Ubuntu Linux, type the following commands
 to install them:
 
-$ sudo apt-get install python-pygame python-requests
+$ sudo apt-get install python-pygame python-requests python-opencv
 
 * Windows
-Install pygame-1.9.1.win32-py2.7.msi from pygame official site.
-To install requests, extract the tarball and run
-"python setup.py install"
+Install PythonXY, pygame-1.9.1.win32-py2.7.msi and opencv2.
+Note that PythonXY includes opencv2 support but it may be not working.
+To work it out, copy cv2.pyd from opencv2 to X:/Python27/lib/site-packages/
+and overwrite the old one.
 
-NOTE:
-Either manually installing requests or python-requests may
-need a bug fix in requests module before running the game.
+* AI's image recognition
+A camera is necessary for AI's image recognition. The AI runs on a machine
+and "observe" the player's screen to recognize the chess board, then "think"
+next place and "tell" the player.
 
-If you right get the issue below when lanunching the game,
-
-Traceback (most recent call last):
-  File "./FiveInRowClient.py", line 996, in <module>
-    app = Game()
-  File "./FiveInRowClient.py", line 167, in __init__
-    r = self.client_register()
-  File "./FiveInRowClient.py", line 349, in client_register
-    r = scripto.execute('vlvRegistration', data)
-  File "/home/test/test/Cloud-Gomoku/mashery_api.py", line 76, in execute
-    r = self.postRequest(url, headers, data)
-  File "/home/test/test/Cloud-Gomoku/cloud.py", line 28, in postRequest
-    return utils.post(url, headers, data, ssl = self.ssl)
-  File "/home/test/test/Cloud-Gomoku/utils.py", line 51, in post
-    r = requests.post(url, headers = headers, data = payload, verify = ssl)
-  File "/usr/lib/python2.7/dist-packages/requests/api.py", line 111, in post
-    return request('post', url, data=data, **kwargs)
-TypeError: request() got an unexpected keyword argument 'verify'
-
-just apply the patch at patch/requests-fix-matching-special-URL-for-SSL-certificate.patch
-
-- How to play and watch game?
-
+- How to play and observe the game?
 For an example here, the first player starts a game client on a PC, 
 and the second player runs another on a device, such as on an Intel 
-Galileo board with a touch screen.  Other persons can watch the game 
-that player 1 and player 2 on live. Also the histories of a game can 
-be played back in watching mode (by passing a game id). 
+Galileo Gen2 board with a touch screen. Other people can observe current
+game on live. Also the historical games can be played back in observer
+mode.
 
-It is allowed to establish multiple games and watchers for playing back
-or watching running games simultaneously.
+It is allowed to establish multiple games by multiple players and observes
+for playing back or watching live games simultaneously.
 
-Note that a game server must be launched first prior to playing a game.
+Note that a game server must be launched in the following way prior to
+starting a game.
+$ python FiveInRowServer.py
 
-- Steps
-Player1:
-FiveInRowClient.py -i config.json_pc
+For player 1:
+$ python FiveInRowClient.py -i config.json_pc
 
-Player2:
-FiveInRowClient.py -i config.json_touch
+For Player 2:
+$ python FiveInRowClient.py -i config.json_touch
 
-Watcher(s):
-FiveInRowClient.py -i config.json_pc -g <game_id>
+For observers:
+$ python FiveInRowClient.py -i config.json_pc -g <game_id>
+where <game_id> is a digital number, identifying a game for playing back
+a historical game or live game, depending on if the specified game is
+still in playing or not.
 
-NOTES: 
-A configuration file has to be used for the game client to get the 
-player's name, screen width and high, and input method, etc., at this 
-version of the game. 
+For AI's image recognition:
+$ python FiveInRowClient_AI_REC_CONSOLE.py -i REC/config.json_pc_rec
+Note that the AI will print the thinking result to console.
 
-For more usage please refer to “FiveInRowClient.py -h”.
+For more usages, please refer to "python FiveInRowClient.py -h".
