@@ -1,6 +1,16 @@
 This well-known Five-In-Row game is designed for demonstrating how to
 completely implement it based on the cloud.
 
+
+There is a video introducing this project on youtube as below.
+
+https://youtu.be/uLS7JmFyTc0
+
+Another PPT for this project can be found at the following URL.
+https://github.com/charleshardy/Cloud-Gomoku/blob/master/Cloud-Gomoku_Valvrave_Coding_Camp_2015_V7.ppt 
+
+
+
 - Preparation
 The game is completely written in python. The supporting python version is
 2.7.x. Additionally, this game depends the following python modules: pygame,
